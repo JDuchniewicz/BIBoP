@@ -1,26 +1,16 @@
-### DISCLAIMER
-### This is an example Makefile and it MUST be configured to suit your needs.
-### For detailed explanations about all the available options,
-### please refer to https://github.com/sudar/Arduino-Makefile/blob/master/arduino-mk-vars.md
-
-### PROJECT_DIR
-### This is the path to where you have created/cloned your project
+# For now makefile will be in this file, we will change it later
 PROJECT_DIR       = $(shell dirname $(shell dirname $(shell pwd)))
 
-### ARDMK_DIR
 ### Path to the Arduino-Makefile directory.
 ARDMK_DIR         = $(PROJECT_DIR)/Arduino-Makefile
 
 ### ARDUINO_DIR
 ### Path to the Arduino application and resources directory.
-### For Arduino IDE 1.0.x
-# ARDUINO_DIR       = /Applications/Arduino.app/Contents/Resources/Java
-### For Arduino IDE 1.6.x ++
-ARDUINO_DIR       = /Applications/Arduino.app/Contents/Java
+ARDUINO_DIR       = /usr/share/arduino
 
 ### USER_LIB_PATH
 ### Path to where the your project's libraries are stored.
-USER_LIB_PATH    :=  $(PROJECT_DIR)/lib
+USER_LIB_PATH     :=  $(realpath $(PROJECT_DIR)/lib)
 
 ### BOARD_TAG & BOARD_SUB
 ### For Arduino IDE 1.0.x
@@ -32,33 +22,12 @@ USER_LIB_PATH    :=  $(PROJECT_DIR)/lib
 BOARD_TAG         = mega
 BOARD_SUB         = atmega2560
 
-### MONITOR_PORT
-### The port your board is connected to. Using an '*' tries all the ports and finds the right one.
-MONITOR_PORT      = /dev/tty.usbmodem*
-
-### MONITOR_BAUDRATE
-### It must be set to Serial baudrate value you are using.
+MONITOR_PORT      = /dev/ttyACM*
 MONITOR_BAUDRATE  = 115200
-
-### AVR_TOOLS_DIR
-### Path to the AVR tools directory such as avr-gcc, avr-g++, etc.
-AVR_TOOLS_DIR     = /usr/local
-
-### AVRDUDE
-### Path to avrdude directory.
-AVRDUDE           = /usr/local/bin/avrdude
-AVRDUDE_OPTS      = -v -v
-
-### CFLAGS_STD
+AVR_TOOLS_DIR     = /usr
+AVRDUDE           = /usr/bin/avrdude
 CFLAGS_STD        = -std=gnu11
-
-### CXXFLAGS_STD
-### You can choose wich ever you like
-# CXXFLAGS_STD      = -std=gnu++11
 CXXFLAGS_STD      = -std=gnu++17
-
-### CPPFLAGS
-### Flags you might want to set for debugging purpose. Comment to stop.
 CXXFLAGS         += -pedantic -Wall -Wextra
 LDFLAGS          += -fdiagnostics-color
 
