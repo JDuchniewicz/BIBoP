@@ -3,9 +3,7 @@ PROJECT_DIR       = $(shell dirname $(shell dirname $(shell pwd)))
 
 ### Path to the Arduino-Makefile directory.
 ARDMK_DIR         = $(PROJECT_DIR)/Arduino-Makefile
-
-### ARDUINO_DIR
-### Path to the Arduino application and resources directory.
+ARDUINO_PACKAGE_DIR = $(HOME)/.arduino15/packages
 ARDUINO_DIR       = /usr/share/arduino
 
 ### USER_LIB_PATH
@@ -19,8 +17,8 @@ USER_LIB_PATH     :=  $(realpath $(PROJECT_DIR)/lib)
 ### For Arduino IDE 1.6.x
 ### Both BOARD_TAG and BOARD_SUB are needed. They must be set to the board you are currently using. (i.e BOARD_TAG = uno, mega, etc. & BOARD_SUB = atmega2560, etc.)
 ### Note: for the Arduino Uno, only BOARD_TAG is mandatory and BOARD_SUB can be equal to anything
-BOARD_TAG         = mega
-BOARD_SUB         = atmega2560
+BOARD_TAG         = nano
+BOARD_SUB         = nano_33_iot
 
 MONITOR_PORT      = /dev/ttyACM*
 MONITOR_BAUDRATE  = 115200
@@ -37,6 +35,5 @@ LDFLAGS          += -fdiagnostics-color
 CURRENT_DIR       = $(shell basename $(CURDIR))
 OBJDIR            = $(PROJECT_DIR)/build/$(CURRENT_DIR)/$(BOARD_TAG)
 
-### path to Arduino.mk, inside the ARDMK_DIR, don't touch.
-include $(ARDMK_DIR)/Arduino.mk
+include $(ARDMK_DIR)/Sam.mk
 
