@@ -1,55 +1,34 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include "FooLib.h"
+#include "Collector.h"
 
-FooClass FooObject;
+// For now just implement it here, move out to classes and libraries when more complex stuff is going on
 
-// constants won't change. Used here to set a pin number:
-const int ledPin =  LED_BUILTIN;// the number of the LED pin
+Collector collector;
 
-// Variables will change:
-int ledState = LOW;             // ledState used to set the LED
+void printLastData()
+{
+    auto samples = collector.getLastData();
+    Serial.print(" R: ");
+    Serial.print(samples.first);
+    Serial.print(" IR: ");
+    Serial.print(samples.second);
+    Serial.println();
+}
 
-// Generally, you should use "unsigned long" for variables that hold time
-// The value will quickly become too large for an int to store
-unsigned long previousMillis = 0;        // will store last time LED was updated
-
-// constants won't change:
-const long interval = 3000;           // interval at which to blink (milliseconds)
-
-void setup() {
-
-	pinMode(ledPin, OUTPUT);
+void setup()
+{
     Serial.begin(115200);
-	delay(1000);
+    if (collector.init() != 0)
+        while(1);
 
 }
 
-void loop() {
-
-	Serial.println("Hello world");
-    unsigned long currentMillis = millis();
-
-      if (currentMillis - previousMillis >= interval) {
-        // save the last time you blinked the LED
-        previousMillis = currentMillis;
-
-        // if the LED is off turn it on and vice-versa:
-        if (ledState == LOW) {
-          ledState = HIGH;
-        } else {
-          ledState = LOW;
-        }
-
-        // set the LED with the ledState of the variable:
-        digitalWrite(ledPin, ledState);
-      }
-    /*
-	FooObject.firstFooMethod();
-	delay(1000);
-	FooObject.secondFooMethod();
-	delay(1000);
-    */
-
+void loop()
+{
+    // collect the data
+    collector.getData();
+    // perform the inference if needed
+    printLastData();
 }
 

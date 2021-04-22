@@ -23,8 +23,8 @@
 -I/home/jduchniewicz/.arduino15/packages/arduino/hardware/samd/1.8.11/cores/arduino/api
 -I/home/jduchniewicz/.arduino15/packages/arduino/hardware/samd/1.8.11/variants/nano_33_iot
 -I/home/jduchniewicz/.arduino15/packages/arduino/hardware/samd/1.8.11/libraries/Wire
--I/mnt/games/Projects/Personal/BIBoP/lib/FooLib
--I/mnt/games/Projects/Personal/BIBoP/lib/BarLib
+-I/mnt/games/Projects/Personal/BIBoP/lib/MAX30105
+-I/mnt/games/Projects/Personal/BIBoP/lib/BIBoP
 -Wall
 -ffunction-sections
 -fdata-sections
