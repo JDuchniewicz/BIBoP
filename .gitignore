@@ -9,3 +9,4 @@ debug.txt
 .ycm_extra_conf.pyc
 .ropeproject
 lib/*
+*.ccls

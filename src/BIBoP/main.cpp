@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "Collector.h"
+// because of how arduino makefile builds dependencies, this finds proper files in the libs/ dir - they are otherwise unused here
+#include "Defines.h"
+#include "MAX30105.h"
 
 // For now just implement it here, move out to classes and libraries when more complex stuff is going on
 
