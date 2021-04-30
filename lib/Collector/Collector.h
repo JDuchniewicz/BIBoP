@@ -20,7 +20,6 @@ private:
     uint16_t redBuffer[BUFSIZE];
     uint16_t irBuffer[BUFSIZE];
     int idx;
-
     MAX30105 pulseoximiter;
     // other classes
 };

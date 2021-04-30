@@ -42,5 +42,9 @@ int Collector::readData()
 
 Pair<uint16_t, uint16_t> Collector::getLastData()
 {
-    return Pair(redBuffer[idx], irBuffer[idx]);
+    // TODO: change to a circular buffer
+    if (idx % BUFSIZE == 0)
+        return Pair(redBuffer[BUFSIZE - 1], irBuffer[BUFSIZE - 1]);
+
+    return Pair(redBuffer[idx % BUFSIZE - 1], irBuffer[idx % BUFSIZE - 1]);
 }
