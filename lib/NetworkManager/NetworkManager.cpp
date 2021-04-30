@@ -1,6 +1,6 @@
 #include "NetworkManager.h"
 
-NetworkManager::NetworkManager() : status(WL_IDLE_STATUS)
+NetworkManager::NetworkManager()
 {
 
 }
@@ -10,8 +10,9 @@ NetworkManager::~NetworkManager()
 
 }
 
-int NetworkManager::init(const char* ssid, const char* pass)
+int NetworkManager::init(const char* ssid, const char* pass, const char* lambda_serv)
 {
+    int status = WL_IDLE_STATUS;
     if (WiFi.status() == WL_NO_MODULE)
     {
         Serial.println("Communication with WiFi module failed!");
@@ -28,7 +29,42 @@ int NetworkManager::init(const char* ssid, const char* pass)
     Serial.print("Success!");
     printWifiData();
 
+    lambda_serv_ip = lambda_serv;
     return 0;
+}
+
+int NetworkManager::postWiFi(const char* buffer)
+{
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println("WiFi is disconected! Run init first!");
+        return -1;
+    }
+
+    if (!lambda.connect(lambda_serv_ip, 80))
+    {
+        Serial.println("WiFi is disconected! Run init first!");
+        return -1;
+    }
+    // success - send the data
+    lambda.println("POST /Prod/classify HTTP/1.1");
+    lambda.print("Host: ");
+    lambda.println(lambda_serv_ip);
+    lambda.println("content-type: application/json");
+    lambda.println("accept: */*");
+    lambda.print("content-length: ");
+    lambda.println("1658");
+    //lambda.println("connection: close");
+    lambda.println();
+    lambda.println(buffer);
+}
+
+void NetworkManager::readWiFi()
+{
+    while (lambda.available())
+    {
+        Serial.write(lambda.read());
+    }
 }
 
 //TODO: extend this printing?

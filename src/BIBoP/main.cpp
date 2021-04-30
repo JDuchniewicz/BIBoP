@@ -32,16 +32,28 @@ void setup()
     if (collector.init() != 0)
         while(1);
 
-    if (networkManager.init(ssid, pass) != 0)
+    if (networkManager.init(ssid, pass, lambda_serv) != 0)
         while(1);
 
+    // TODO for now just hardcoded and once
+    /*
+    int status = -1;
+    while (status != 0)
+    {
+
+    }
+    */
+    Serial.println("Attempt sending the payload.");
+    networkManager.postWiFi(request_body);
 }
 
 void loop()
 {
+    networkManager.readWiFi();
     // collect the data
     collector.getData();
     // perform the inference if needed
-    printLastData();
+    //printLastData();
+    //networkManager.postWiFi()
 }
 

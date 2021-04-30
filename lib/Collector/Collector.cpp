@@ -10,7 +10,6 @@ Collector::~Collector()
 
 }
 
-// setup 125 Hz for collection speed
 int Collector::init()
 {
     if (!pulseoximiter.begin())
@@ -20,6 +19,7 @@ int Collector::init()
     }
 
     pulseoximiter.setup();
+    pulseoximiter.setSampleRate(125); // set 125 Hz
     return 0;
 }
 
