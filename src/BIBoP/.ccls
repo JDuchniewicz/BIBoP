@@ -26,6 +26,8 @@
 -I/mnt/games/Projects/Personal/BIBoP/lib/MAX30105/src
 -I/mnt/games/Projects/Personal/BIBoP/lib/WiFiNINA/src
 -I/mnt/games/Projects/Personal/BIBoP/lib/WiFiNINA/src/utility
+-I/mnt/games/Projects/Personal/BIBoP/lib/ArduinoECCX08/src
+-I/mnt/games/Projects/Personal/BIBoP/lib/ArduinoBearSSL/src
 -I/mnt/games/Projects/Personal/BIBoP/lib/NetworkManager
 -I/mnt/games/Projects/Personal/BIBoP/lib/Collector
 -I/mnt/games/Projects/Personal/BIBoP/lib/Defines

@@ -1,23 +1,30 @@
 #pragma once
 
 #include "Defines.h"
-#include "WiFiNINA.h"
+#include <WiFiNINA.h>
+#include <ArduinoBearSSL.h>
+#include <ArduinoECCX08.h>
 
 class NetworkManager
 {
 public:
-    NetworkManager();
+    NetworkManager(BearSSLClient& sslLambda);
     ~NetworkManager();
 
-    int init(const char* ssid, const char* pass, const char* lambda_serv);
+    int init(const char* ssid, const char* pass, const char* lambda_serv, const char* certificate);
     int postWiFi(const char* buffer);
-void     void readWiFi();
+    void readWiFi();
+    bool serverDisconnectedWiFi();
 
 private:
     void printWifiData();
     void printCurrentNet();
+    void connectWiFi();
+    static unsigned long getTime();
 
-    WiFiClient lambda;
-    const char* lambda_serv_ip;
+    BearSSLClient& sslLambda;
+    const char* m_lambda_serv;
+    const char* m_ssid;
+    const char* m_pass;
     int status;
 };

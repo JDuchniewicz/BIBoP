@@ -1,6 +1,6 @@
 #include "NetworkManager.h"
 
-NetworkManager::NetworkManager()
+NetworkManager::NetworkManager(BearSSLClient& sslLambda) : sslLambda(sslLambda)
 {
 
 }
@@ -10,61 +10,74 @@ NetworkManager::~NetworkManager()
 
 }
 
-int NetworkManager::init(const char* ssid, const char* pass, const char* lambda_serv)
+int NetworkManager::init(const char* ssid, const char* pass, const char* lambda_serv, const char* certificate)
 {
-    int status = WL_IDLE_STATUS;
+    if (!ECCX08.begin())
+    {
+        Serial.println("Could not initialize ECCX08!");
+        return -1;
+    }
+
+    ArduinoBearSSL.onGetTime(NetworkManager::getTime);
+    sslLambda.setEccSlot(0, certificate);
+
     if (WiFi.status() == WL_NO_MODULE)
     {
         Serial.println("Communication with WiFi module failed!");
         return -1;
     }
 
-    while (status != WL_CONNECTED)
-    {
-        Serial.print("Attempting to connect to WPA SSID: ");
-        Serial.println(ssid);
-        status = WiFi.begin(ssid, pass);
-        delay(10000);
-    }
-    Serial.print("Success!");
-    printWifiData();
 
-    lambda_serv_ip = lambda_serv;
+    m_lambda_serv = lambda_serv;
+    m_ssid = ssid;
+    m_pass = pass;
     return 0;
 }
 
 int NetworkManager::postWiFi(const char* buffer)
 {
-    if (WiFi.status() != WL_CONNECTED)
+    while (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("WiFi is disconected! Run init first!");
-        return -1;
+        Serial.println("WiFi is disconected! Reconnecting");
+        connectWiFi();
     }
 
-    if (!lambda.connect(lambda_serv_ip, 80))
+    if (!sslLambda.connect(m_lambda_serv, 443))
     {
         Serial.println("WiFi is disconected! Run init first!");
         return -1;
     }
     // success - send the data
-    lambda.println("POST /Prod/classify HTTP/1.1");
-    lambda.print("Host: ");
-    lambda.println(lambda_serv_ip);
-    lambda.println("content-type: application/json");
-    lambda.println("accept: */*");
-    lambda.print("content-length: ");
-    lambda.println("1658");
+    sslLambda.println("POST /Prod/classify HTTP/1.1");
+    sslLambda.print("Host: ");
+    sslLambda.println(m_lambda_serv);
+    sslLambda.println("content-type: application/json");
+    sslLambda.println("accept: */*");
+    sslLambda.print("content-length: ");
+    sslLambda.println("1658");
     //lambda.println("connection: close");
-    lambda.println();
-    lambda.println(buffer);
+    sslLambda.println();
+    sslLambda.println(buffer);
+    Serial.println("Posted request");
+    return 0;
 }
 
 void NetworkManager::readWiFi()
 {
-    while (lambda.available())
+    while (sslLambda.available())
     {
-        Serial.write(lambda.read());
+        Serial.write(sslLambda.read());
     }
+}
+
+bool NetworkManager::serverDisconnectedWiFi()
+{
+    if (!sslLambda.connected())
+    {
+        sslLambda.stop();
+        return true;
+    }
+    return false;
 }
 
 //TODO: extend this printing?
@@ -80,4 +93,24 @@ void NetworkManager::printCurrentNet()
 {
     Serial.print("SSID:");
     Serial.println(WiFi.SSID());
+}
+
+void NetworkManager::connectWiFi()
+{
+    int status = WL_IDLE_STATUS;
+
+    while (status != WL_CONNECTED)
+    {
+        Serial.print("Attempting to connect to WPA SSID: ");
+        Serial.println(m_ssid);
+        status = WiFi.begin(m_ssid, m_pass);
+        delay(7000);
+    }
+    Serial.print("Success!");
+    printWifiData();
+}
+
+unsigned long NetworkManager::getTime()
+{
+    return WiFi.getTime();
 }
