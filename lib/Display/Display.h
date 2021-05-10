@@ -12,5 +12,5 @@ public:
     int init();
     int update(const Batch& batch);
 private:
-    /* data */
+    uint8_t mode;
 };

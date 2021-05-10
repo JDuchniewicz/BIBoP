@@ -22,4 +22,7 @@ private:
     int idx;
     MAX30105 pulseoximiter;
     // other classes
+    long m_lastBeat;
+    uint8_t m_heartRates[HR_AVG_WIN_SIZE];
+    uint8_t m_hrIdx;
 };

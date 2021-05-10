@@ -58,6 +58,7 @@ void setup()
         while(1);
 }
 
+// TODO: if time becomes a hindrance -> need to stop doing data processing in the collector
 void loop()
 {
     //Serial.println("looping...");
