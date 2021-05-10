@@ -28,8 +28,8 @@ int Collector::init()
 
 int Collector::getData()
 {
-    uint16_t red = pulseoximiter.getRed();
-    uint16_t ir = pulseoximiter.getIR();
+    uint32_t red = pulseoximiter.getRed();
+    uint32_t ir = pulseoximiter.getIR();
 
     redBuffer[idx % BUFSIZE] = red;
     irBuffer[idx % BUFSIZE] = ir;
@@ -59,16 +59,19 @@ int Collector::getLastData(Batch& batch)
 
         if (checkForBeat(irBuffer[i]))
         {
+            Serial.println("FOOUND BEAT");
+            Serial.println(irBuffer[i]);
             long delta = millis() - m_lastBeat;
             m_lastBeat = delta;
+            Serial.println(delta);
 
-            uint8_t beatsPerMinute = (uint8_t)(60 / (delta / 1000.0));
-            if (beatsPerMinute < 255 && beatsPerMinute < 20)
+            float beatsPerMinute = (60 / (delta / 1000.0));
+            if (beatsPerMinute < 255 && beatsPerMinute > 20)
             {
                 m_heartRates[m_hrIdx++] = beatsPerMinute;
                 m_hrIdx %= HR_AVG_WIN_SIZE;
 
-                uint16_t beatAvg = 0;
+                uint32_t beatAvg = 0;
                 for (uint8_t k = 0; k < HR_AVG_WIN_SIZE; ++k)
                     beatAvg += m_heartRates[k];
 

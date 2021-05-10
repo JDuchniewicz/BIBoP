@@ -9,8 +9,8 @@ constexpr auto HR_AVG_WIN_SIZE = 4;
 
 struct Batch
 {
-    uint16_t ppg_red;
-    uint16_t ppg_ir; // TODO: for now just return a single most recent value
+    uint32_t ppg_red;
+    uint32_t ppg_ir; // TODO: for now just return a single most recent value
 
     uint16_t beatAverage;
     uint16_t spO2;
