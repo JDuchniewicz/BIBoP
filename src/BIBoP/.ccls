@@ -28,9 +28,11 @@
 -I/mnt/games/Projects/Personal/BIBoP/lib/WiFiNINA/src/utility
 -I/mnt/games/Projects/Personal/BIBoP/lib/ArduinoECCX08/src
 -I/mnt/games/Projects/Personal/BIBoP/lib/ArduinoBearSSL/src
+-I/mnt/games/Projects/Personal/BIBoP/lib/ACROBOTIC_SSD1306
 -I/mnt/games/Projects/Personal/BIBoP/lib/NetworkManager
 -I/mnt/games/Projects/Personal/BIBoP/lib/Collector
 -I/mnt/games/Projects/Personal/BIBoP/lib/Defines
+-I/mnt/games/Projects/Personal/BIBoP/lib/Display
 -Wall
 -ffunction-sections
 -fdata-sections

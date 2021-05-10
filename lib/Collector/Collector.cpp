@@ -40,11 +40,12 @@ int Collector::readData()
     return 0;
 }
 
-Pair<uint16_t, uint16_t> Collector::getLastData()
+int Collector::getLastData(Batch& batch)
 {
     // TODO: change to a circular buffer
-    if (idx % BUFSIZE == 0)
-        return Pair(redBuffer[BUFSIZE - 1], irBuffer[BUFSIZE - 1]);
+    auto i = (idx % BUFSIZE == 0) ? BUFSIZE - 1 : idx % BUFSIZE - 1;
+    batch.ppg_red = redBuffer[i];
+    batch.ppg_ir = irBuffer[i];
 
-    return Pair(redBuffer[idx % BUFSIZE - 1], irBuffer[idx % BUFSIZE - 1]);
+    return 0;
 }

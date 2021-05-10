@@ -15,7 +15,7 @@ public:
     int getData();
     int readData();
 
-    Pair<uint16_t, uint16_t> getLastData();
+    int getLastData(Batch& batch);
 private:
     uint16_t redBuffer[BUFSIZE];
     uint16_t irBuffer[BUFSIZE];
