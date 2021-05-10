@@ -14,8 +14,6 @@
 #include <ArduinoBearSSL.h>
 #include <ACROBOTIC_SSD1306.h>
 
-// For now just implement it here, move out to classes and libraries when more complex stuff is going on
-
 Collector collector;
 Display display;
 WiFiClient lambda;

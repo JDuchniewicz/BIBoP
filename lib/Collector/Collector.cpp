@@ -19,14 +19,14 @@ int Collector::init()
     }
 
     pulseoximiter.setup();
-    pulseoximiter.setSampleRate(125); // set 125 Hz
+    pulseoximiter.setSampleRate(SAMPLING_HZ); // set 125 Hz
     return 0;
 }
 
 int Collector::getData()
 {
     uint16_t red = pulseoximiter.getRed();
-    uint16_t ir = pulseoximiter.getGreen();
+    uint16_t ir = pulseoximiter.getIR();
 
     redBuffer[idx % BUFSIZE] = red;
     irBuffer[idx % BUFSIZE] = ir;

@@ -21,7 +21,7 @@ int Display::init()
     return 0; // is int required here?
 }
 
-int Display::update(Batch& batch)
+int Display::update(const Batch& batch)
 {
     oled.setTextXY(0, 0);
     oled.putString("Red: ");
@@ -29,4 +29,5 @@ int Display::update(Batch& batch)
     oled.setTextXY(1, 0);
     oled.putString("IR: ");
     oled.putNumber(batch.ppg_ir);
+    return 0;
 }

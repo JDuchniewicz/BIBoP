@@ -10,7 +10,7 @@ public:
     ~Display();
 
     int init();
-    int update(Batch& batch);
+    int update(const Batch& batch);
 private:
     /* data */
 };

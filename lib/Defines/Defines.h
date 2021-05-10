@@ -3,7 +3,7 @@
 #include <stdint.h>
 // all the defines will be stored here
 constexpr int SAMPLING_HZ = 125;
-constexpr int BUFSIZE = SAMPLING_HZ * 4;
+constexpr int BUFSIZE = SAMPLING_HZ * 1; // TODO: tweak the buffer size and dont add delays
 
 struct Batch
 {
