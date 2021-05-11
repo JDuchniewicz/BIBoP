@@ -21,6 +21,7 @@ BearSSLClient sslLambda(lambda);
 NetworkManager networkManager(sslLambda);
 
 Batch batch; // for now this is a static container (could be a ring of data)
+long lastTime = 0;
 
 void printLastData()
 {
@@ -61,6 +62,10 @@ void setup()
 // TODO: if time becomes a hindrance -> need to stop doing data processing in the collector
 void loop()
 {
+    long d = millis() - lastTime;
+    lastTime = millis();
+    Serial.print("DELAY ");
+    Serial.println(d);
     //Serial.println("looping...");
     //networkManager.readWiFi();
     //if (networkManager.serverDisconnectedWiFi())
@@ -72,7 +77,7 @@ void loop()
     collector.getData();
     collector.getLastData(batch);
     // perform the inference if needed
-    //printLastData();
+    printLastData();
     //networkManager.postWiFi()
 
     display.update(batch);

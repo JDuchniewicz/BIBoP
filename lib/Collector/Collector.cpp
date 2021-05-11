@@ -14,7 +14,7 @@ Collector::~Collector()
 
 int Collector::init()
 {
-    if (!pulseoximiter.begin())
+    if (!pulseoximiter.begin(Wire, I2C_SPEED_FAST))
     {
         Serial.println("No sensor connected!)");
         return -1;
@@ -66,9 +66,10 @@ int Collector::getLastData(Batch& batch)
             Serial.println(delta);
 
             float beatsPerMinute = (60 / (delta / 1000.0));
+            Serial.println(beatsPerMinute);
             if (beatsPerMinute < 255 && beatsPerMinute > 20)
             {
-                m_heartRates[m_hrIdx++] = beatsPerMinute;
+                m_heartRates[m_hrIdx++] = (uint8_t)beatsPerMinute;
                 m_hrIdx %= HR_AVG_WIN_SIZE;
 
                 uint32_t beatAvg = 0;

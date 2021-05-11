@@ -13,4 +13,5 @@ public:
     int update(const Batch& batch);
 private:
     uint8_t mode;
+    uint16_t counter;
 };

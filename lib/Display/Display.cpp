@@ -1,6 +1,6 @@
 #include "Display.h"
 
-Display::Display() : mode(255)
+Display::Display() : mode(255), counter(0)
 {
 
 }
@@ -23,37 +23,44 @@ int Display::init()
 
 int Display::update(const Batch& batch)
 {
-    if (!batch.deviceOk)
+    // TODO: hack -> should be done in a nicer way, counting here probably a bad design
+    ++counter;
+    if (counter == 100 - 1)
     {
-        if (mode != 0)
-            oled.clearDisplay();
+        counter = 0;
 
-        mode = 0;
+        if (!batch.deviceOk)
+        {
+            if (mode != 0)
+                oled.clearDisplay();
 
-        oled.setTextXY(2, 0);
-        oled.putString("INVALID SIGNAL");
-        oled.setTextXY(3, 0);
-        oled.putString("PLEASE MOVE BAND");
-        oled.setTextXY(4, 0);
-        oled.putString("UNTIL THIS DISSAPEARS!");
-    }
-    else
-    {
-        if (mode != 1)
-            oled.clearDisplay();
+            mode = 0;
 
-        mode = 1;
-        // this will be too small... need probably a different oled library
-        oled.setTextXY(1, 0);
-        oled.putString("BPM: ");
-        oled.putNumber(batch.beatAverage);
-        oled.setTextXY(3, 0);
-        oled.putString("SpO2: ");
-        oled.putNumber(batch.spO2);
-        oled.setTextXY(4, 0);
-        oled.putString("Temperature: ");
-        oled.putNumber(batch.temperature); // add celcius degrees
-        // add hrv
+            oled.setTextXY(2, 0);
+            oled.putString("INVALID SIGNAL");
+            oled.setTextXY(3, 0);
+            oled.putString("PLEASE MOVE BAND");
+            oled.setTextXY(4, 0);
+            oled.putString("UNTIL THIS DISSAPEARS!");
+        }
+        else
+        {
+            if (mode != 1)
+                oled.clearDisplay();
+
+            mode = 1;
+            // this will be too small... need probably a different oled library
+            oled.setTextXY(1, 0);
+            oled.putString("BPM: ");
+            oled.putNumber(batch.beatAverage);
+            oled.setTextXY(3, 0);
+            oled.putString("SpO2: ");
+            oled.putNumber(batch.spO2);
+            oled.setTextXY(4, 0);
+            oled.putString("Temperature: ");
+            oled.putNumber(batch.temperature); // add celcius degrees
+            // add hrv
+        }
     }
     return 0;
 }
