@@ -13,6 +13,7 @@ struct Batch
     uint32_t ppg_ir; // TODO: for now just return a single most recent value
 
     uint16_t beatAverage;
+    float beatsPerMinute;
     uint16_t spO2;
     uint16_t temperature;
     bool deviceOk;

@@ -22,6 +22,7 @@ int Collector::init()
 
     pulseoximiter.setup();
     pulseoximiter.setSampleRate(SAMPLING_HZ); // set 125 Hz
+    pulseoximiter.setPulseAmplitudeRed(0x0A);
     pulseoximiter.enableDIETEMPRDY();
     return 0;
 }
@@ -59,14 +60,16 @@ int Collector::getLastData(Batch& batch)
 
         if (checkForBeat(irBuffer[i]))
         {
-            Serial.println("FOOUND BEAT");
-            Serial.println(irBuffer[i]);
+            //Serial.println("FOOUND BEAT");
+            //Serial.println(irBuffer[i]);
             long delta = millis() - m_lastBeat;
-            m_lastBeat = delta;
-            Serial.println(delta);
+            m_lastBeat = millis();
 
             float beatsPerMinute = (60 / (delta / 1000.0));
-            Serial.println(beatsPerMinute);
+            //Serial.println(beatsPerMinute);
+
+            batch.beatsPerMinute = beatsPerMinute;
+
             if (beatsPerMinute < 255 && beatsPerMinute > 20)
             {
                 m_heartRates[m_hrIdx++] = (uint8_t)beatsPerMinute;

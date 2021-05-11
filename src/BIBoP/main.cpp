@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <Scheduler.h>
+
 #include "Collector.h"
 #include "NetworkManager.h"
 #include "Display.h"
@@ -21,7 +23,10 @@ BearSSLClient sslLambda(lambda);
 NetworkManager networkManager(sslLambda);
 
 Batch batch; // for now this is a static container (could be a ring of data)
-long lastTime = 0;
+//long lastTime = 0;
+
+// C, eh?
+void displayLoop();
 
 void printLastData()
 {
@@ -57,15 +62,24 @@ void setup()
 
     if (display.init() != 0)
         while(1);
+
+    // Start screen update loop
+    Scheduler.startLoop(displayLoop);
+}
+
+void displayLoop()
+{
+    display.update(batch);
+    delay(500);
 }
 
 // TODO: if time becomes a hindrance -> need to stop doing data processing in the collector
 void loop()
 {
-    long d = millis() - lastTime;
-    lastTime = millis();
-    Serial.print("DELAY ");
-    Serial.println(d);
+    //long d = millis() - lastTime;
+    //lastTime = millis();
+    //Serial.print("DELAY ");
+    //Serial.println(d);
     //Serial.println("looping...");
     //networkManager.readWiFi();
     //if (networkManager.serverDisconnectedWiFi())
@@ -79,7 +93,6 @@ void loop()
     // perform the inference if needed
     printLastData();
     //networkManager.postWiFi()
-
-    display.update(batch);
+    yield();
 }
 
