@@ -44,6 +44,7 @@ int Collector::readData()
     return 0;
 }
 
+// TODO: this probably needs a big rework, getting spo2 and IR threshold + dynamic peak detection
 int Collector::getLastData(Batch& batch)
 {
     // TODO: change to a circular buffer

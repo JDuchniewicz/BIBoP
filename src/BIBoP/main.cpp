@@ -23,10 +23,13 @@ BearSSLClient sslLambda(lambda);
 NetworkManager networkManager(sslLambda);
 
 Batch batch; // for now this is a static container (could be a ring of data)
-//long lastTime = 0;
+//long lastTime = 0
+volatile long debounce_time = 0;
+volatile long current_time = 0;
 
 // C, eh?
 void displayLoop();
+void buttonIrq();
 
 void printLastData()
 {
@@ -65,6 +68,10 @@ void setup()
 
     // Start screen update loop
     Scheduler.startLoop(displayLoop);
+
+    // attach the wake-up interrupt from a button
+    pinMode(2, INPUT_PULLUP);
+    attachInterrupt(2, buttonIrq, FALLING);
 }
 
 void displayLoop()
@@ -73,9 +80,20 @@ void displayLoop()
     delay(500);
 }
 
+void buttonIrq()
+{
+    current_time = millis();
+    if ((current_time - debounce_time) > 300)
+    {
+        Serial.println("IRQ!");
+    }
+    debounce_time = current_time;
+}
+
 // TODO: if time becomes a hindrance -> need to stop doing data processing in the collector
 void loop()
 {
+    //Serial.println("REGULAR!");
     //long d = millis() - lastTime;
     //lastTime = millis();
     //Serial.print("DELAY ");
@@ -91,7 +109,7 @@ void loop()
     collector.getData();
     collector.getLastData(batch);
     // perform the inference if needed
-    printLastData();
+    //printLastData();
     //networkManager.postWiFi()
     yield();
 }

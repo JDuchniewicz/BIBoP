@@ -18,3 +18,4 @@ struct Batch
     uint16_t temperature;
     bool deviceOk;
 };
+
