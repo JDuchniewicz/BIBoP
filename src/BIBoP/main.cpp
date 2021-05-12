@@ -25,8 +25,19 @@ NetworkManager networkManager(sslLambda);
 Batch batch; // for now this is a static container (could be a ring of data)
 //long lastTime = 0;
 
+//bool readyToDim = true;
+
+volatile uint32_t wakeUpMillis = 0;
+bool activelyUsing = false;
+bool triggerTimeout = false;
+constexpr auto ACTIVITY_INTERVAL = 1000; //1 s for now
+
 // C, eh?
 void displayLoop();
+void buttonIrq();
+void dataTask();
+void wifiTask();
+void oledTask();
 
 void printLastData()
 {
@@ -37,10 +48,45 @@ void printLastData()
     Serial.println();
 }
 
+// move to a class
+void usleep_init()
+{
+    // set up the 32 kHz oscillator as the input clock
+    GCLK->GENDIV.reg = GCLK_GENDIV_ID(2) | GCLK_GENDIV_DIV(0);
+    GCLK->GENCTRL.reg = GCLK_GENCTRL_GENEN | GCLK_GENCTRL_SRC_OSCULP32K | GCLK_GENCTRL_ID(2);
+    GCLK->CLKCTRL.reg = (uint32_t) (GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK2 | (RTC_GCLK_ID << GCLK_CLKCTRL_ID_Pos));
+}
+
+void usleepz(uint32_t usecs)
+{
+    uint32_t limit = (usecs * 1000) / 30500; // the lowest timestep is 30,5 usec for 32 kHz input
+
+    // disable RTC
+    RTC->MODE0.CTRL.reg &= ~RTC_MODE0_CTRL_ENABLE;
+    RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_SWRST;
+
+    // configure RTC in mode 0 (32-bit counter)
+    RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_PRESCALER_DIV1 | RTC_MODE0_CTRL_MODE_COUNT32;
+
+    // Initialize counter values
+    RTC->MODE0.COUNT.reg = 0;
+    RTC->MODE0.COMP[0].reg = limit;
+
+    // enable CMP0 interrupt in the RTC
+    RTC->MODE0.INTENSET.reg |= RTC_MODE0_INTENSET_CMP0;
+
+    // enable RTC
+    RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_ENABLE;
+
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    __DSB();
+    __WFI();
+}
+
 void setup()
 {
-    //Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
-    //while (!Serial);
+    Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
+    while (!Serial);
     delay(200);
 
     if (collector.init() != 0)
@@ -64,7 +110,19 @@ void setup()
         while(1);
 
     // Start screen update loop
-    Scheduler.startLoop(displayLoop);
+    //Scheduler.startLoop(displayLoop);
+
+    // attach the wake-up interrupt from a button
+    pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(9, INPUT_PULLUP);
+    attachInterrupt(9, buttonIrq, LOW);
+
+    // FAILSAFE wait 20 seconds before going to sleep
+    delay(20000);
+
+    usleep_init();
+    triggerTimeout = true;
+    Serial.println("FAZDUNIA");
 }
 
 void displayLoop()
@@ -73,9 +131,100 @@ void displayLoop()
     delay(500);
 }
 
-// TODO: if time becomes a hindrance -> need to stop doing data processing in the collector
+void buttonIrq()
+{
+    //// TODO: this does not work properly with the deepsleep mode and requires special handling.
+    //// Need to check if it will wake up the MCU instantaneously without any further dancing
+    //// disable this interrupt in the normal operating mode
+
+    //// create an interrupt which will work with the deepsleep mode
+
+    //// poor man's debouncing
+    //current_time = millis();
+    //dupa = 0;
+    //if ((current_time - debounce_time) > IRQ_DELAY)
+    //{
+    //    dupa = 2000;
+    //    // TODO: waking up from sleep with a pushbutton will effectively wake up the screen and
+    //    // make the microcontroller's peripherals run for some predefined time (after the user stopped using the device)
+    //    //Serial.println("IRQ!");
+    //}
+    //debounce_time = current_time;
+
+
+    // set up activelyUsing variable
+    wakeUpMillis = millis();
+}
+
 void loop()
 {
+    // in the main loop
+    Serial.println("hi");
+
+    // if the loop triggered by a timeout -> start the timer
+    if (triggerTimeout)
+    {
+        wakeUpMillis = millis();
+        triggerTimeout = false;
+    }
+
+    // check the conditions for going back to sleep -> trigger sleeping
+    uint32_t currentMillis = millis();
+    if (currentMillis - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
+    {
+        digitalWrite(LED_BUILTIN, 0);
+        triggerTimeout = true;
+        usleepz(50000000);
+    }
+    digitalWrite(LED_BUILTIN, 1);
+
+    // if user using the band: (read user input via the button)
+    if (activelyUsing) // TODO: for now not testing this
+    {
+        // refresh timeout timer
+        wakeUpMillis = millis();
+
+        // but still check if time has passed since last button press and go to sleep
+
+    }
+    else
+    {
+        // in a fixed interval: 125 Hz
+        // collect data
+        dataTask();
+
+        // in a fixed interval
+        // send package over wifi/ble
+        wifiTask();
+
+        // in a fixed interval
+        // update the lcd
+        oledTask();
+    }
+
+
+    /*
+    // TODO: somehow this needs unit 10 times greater than it sleeps?
+    usleepz(50000000);
+
+    digitalWrite(LED_BUILTIN, status);
+    status = !status;
+    ++dupa;
+    // simulate a busy loop
+    //while (!readyToDim)
+    //{
+    //    // turn off the buton IRQ and handle it as a regular input, while last input was not handled long ago
+    //    //
+    //    // need to offload wifi handling and data collection in a separate task
+    //    // if this task in progress, wait for completion and only then exit the loop and go to sleep
+    //    // yield after checking the input etc - so other tasks
+    //    need a button handling code here
+    //}
+    delay(10);
+    // TODO: after adding the clock management code, need to structure the data collection and display loops and test it!!
+    //
+    //
+    //Serial.println("REGULAR!");
     //long d = millis() - lastTime;
     //lastTime = millis();
     //Serial.print("DELAY ");
@@ -94,5 +243,22 @@ void loop()
     printLastData();
     //networkManager.postWiFi()
     yield();
+    */
 }
 
+void dataTask()
+{
+    collector.getData();
+    collector.getLastData(batch);
+    printLastData();
+}
+
+void wifiTask()
+{
+
+}
+
+void oledTask()
+{
+
+}
