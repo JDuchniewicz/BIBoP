@@ -29,10 +29,22 @@ Batch batch; // for now this is a static container (could be a ring of data)
 
 volatile uint32_t wakeUpMillis = 0;
 volatile uint32_t buttonPressMillis = 0;
+volatile uint32_t debounceMillis = 0;
 volatile bool activelyUsing = false;
+volatile bool pressAcknowledged = false;
+
 bool triggerTimeout = false;
+
+uint32_t currentMillis = 0;
+uint32_t oledMillis = 0;
+uint32_t dataMillis = 0;
+uint32_t wifiMillis = 0;
+
 constexpr auto ACTIVITY_INTERVAL = 1000; //1 s for now
 constexpr auto WAKEUP_INTERVAL = 5000; //5 s for now
+constexpr auto OLED_INTERVAL = 200;
+constexpr auto DATA_INTERVAL = 1000 / SAMPLING_HZ;
+constexpr auto BUTTON_PRESS_DELAY = 200;
 
 // C, eh?
 void displayLoop();
@@ -158,7 +170,14 @@ void buttonIrq()
     wakeUpMillis = millis();
     buttonPressMillis = wakeUpMillis;
 
-    activelyUsing = true; // probably needs debouncing in the button case
+    activelyUsing = true;
+
+    // needs debouncing in the button case
+    if (wakeUpMillis - debounceMillis > BUTTON_PRESS_DELAY)
+    {
+        pressAcknowledged = true; // needs handling for OLED display changes
+    }
+    debounceMillis = wakeUpMillis; //millis don't advance in IRQ
 }
 
 void loop()
@@ -173,7 +192,7 @@ void loop()
     }
 
     // check the conditions for going back to sleep -> trigger sleeping
-    uint32_t currentMillis = millis();
+    currentMillis = millis();
     if (currentMillis - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
     {
         digitalWrite(LED_BUILTIN, 0);
@@ -197,7 +216,8 @@ void loop()
             activelyUsing = false;
         }
 
-        // different intervals for data and wifi?
+        // different intervals for data and wifi? TODO: wifi?
+        dataTask();
 
         // in a fixed interval
         // update the lcd
@@ -262,9 +282,13 @@ void loop()
 
 void dataTask()
 {
-    collector.getData();
-    collector.getLastData(batch);
-    printLastData();
+    if (currentMillis - dataMillis > DATA_INTERVAL)
+    {
+        collector.getData();
+        collector.getLastData(batch);
+        printLastData();
+        dataMillis = millis();
+    }
 }
 
 void wifiTask()
@@ -274,5 +298,15 @@ void wifiTask()
 
 void oledTask()
 {
+    if (pressAcknowledged)
+    {
+        Serial.println("TODO: change screen");
+        pressAcknowledged = false;
+    }
 
+    if (currentMillis - oledMillis > OLED_INTERVAL) // TODO: greater equal? or consider changing comparison conditions
+    {
+        display.update(batch);
+        oledMillis = millis();
+    }
 }
