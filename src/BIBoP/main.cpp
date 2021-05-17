@@ -63,10 +63,21 @@ void printLastData()
 // move to a class
 void usleep_init()
 {
+    // create a generic clock generator for the RTC peripheral system with ID 2
     // set up the 32 kHz oscillator as the input clock
-    GCLK->GENDIV.reg = GCLK_GENDIV_ID(2) | GCLK_GENDIV_DIV(0);
-    GCLK->GENCTRL.reg = GCLK_GENCTRL_GENEN | GCLK_GENCTRL_SRC_OSCULP32K | GCLK_GENCTRL_ID(2);
-    GCLK->CLKCTRL.reg = (uint32_t) (GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK2 | (RTC_GCLK_ID << GCLK_CLKCTRL_ID_Pos));
+    GCLK->GENDIV.reg = GCLK_GENDIV_ID(2) |
+                       GCLK_GENDIV_DIV(0);
+    while (GCLK->STATUS.bit.SYNCBUSY);
+
+    GCLK->GENCTRL.reg = GCLK_GENCTRL_GENEN |
+                        GCLK_GENCTRL_SRC_OSCULP32K |
+                        GCLK_GENCTRL_ID(2);
+    while (GCLK->STATUS.bit.SYNCBUSY);
+
+    GCLK->CLKCTRL.reg = (uint32_t) (GCLK_CLKCTRL_CLKEN |
+                        GCLK_CLKCTRL_GEN_GCLK2 |
+                        (RTC_GCLK_ID << GCLK_CLKCTRL_ID_Pos));
+    while (GCLK->STATUS.bit.SYNCBUSY); // TODO: can remove cast?
 }
 
 void usleepz(uint32_t usecs)
@@ -79,6 +90,7 @@ void usleepz(uint32_t usecs)
 
     // configure RTC in mode 0 (32-bit counter)
     RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_PRESCALER_DIV1 | RTC_MODE0_CTRL_MODE_COUNT32;
+    while (RTC->MODE0.STATUS.bit.SYNCBUSY);
 
     // Initialize counter values
     RTC->MODE0.COUNT.reg = 0;
@@ -89,6 +101,7 @@ void usleepz(uint32_t usecs)
 
     // enable RTC
     RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_ENABLE;
+    while (RTC->MODE0.STATUS.bit.SYNCBUSY);
 
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
     __DSB();
