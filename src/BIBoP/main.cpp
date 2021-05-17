@@ -28,9 +28,11 @@ Batch batch; // for now this is a static container (could be a ring of data)
 //bool readyToDim = true;
 
 volatile uint32_t wakeUpMillis = 0;
-bool activelyUsing = false;
+volatile uint32_t buttonPressMillis = 0;
+volatile bool activelyUsing = false;
 bool triggerTimeout = false;
 constexpr auto ACTIVITY_INTERVAL = 1000; //1 s for now
+constexpr auto WAKEUP_INTERVAL = 5000; //5 s for now
 
 // C, eh?
 void displayLoop();
@@ -121,8 +123,8 @@ void setup()
     delay(20000);
 
     usleep_init();
+
     triggerTimeout = true;
-    Serial.println("FAZDUNIA");
 }
 
 void displayLoop()
@@ -154,12 +156,14 @@ void buttonIrq()
 
     // set up activelyUsing variable
     wakeUpMillis = millis();
+    buttonPressMillis = wakeUpMillis;
+
+    activelyUsing = true; // probably needs debouncing in the button case
 }
 
 void loop()
 {
     // in the main loop
-    Serial.println("hi");
 
     // if the loop triggered by a timeout -> start the timer
     if (triggerTimeout)
@@ -174,7 +178,9 @@ void loop()
     {
         digitalWrite(LED_BUILTIN, 0);
         triggerTimeout = true;
-        usleepz(50000000);
+
+        // prepare other peripherals to sleep here
+        usleepz(500000000);
     }
     digitalWrite(LED_BUILTIN, 1);
 
@@ -184,8 +190,20 @@ void loop()
         // refresh timeout timer
         wakeUpMillis = millis();
 
-        // but still check if time has passed since last button press and go to sleep
+        // check if time has passed since last button press and go to sleep
+        if (currentMillis - buttonPressMillis > WAKEUP_INTERVAL)
+        {
+            Serial.println("Time to sleep ZZZ");
+            activelyUsing = false;
+        }
 
+        // different intervals for data and wifi?
+
+        // in a fixed interval
+        // update the lcd
+        oledTask();
+
+        Serial.println("Actively using");
     }
     else
     {
@@ -196,10 +214,6 @@ void loop()
         // in a fixed interval
         // send package over wifi/ble
         wifiTask();
-
-        // in a fixed interval
-        // update the lcd
-        oledTask();
     }
 
 
