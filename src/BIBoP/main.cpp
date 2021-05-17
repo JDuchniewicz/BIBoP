@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <Scheduler.h>
 
 #include "Collector.h"
 #include "NetworkManager.h"
@@ -23,13 +22,30 @@ BearSSLClient sslLambda(lambda);
 NetworkManager networkManager(sslLambda);
 
 Batch batch; // for now this is a static container (could be a ring of data)
-//long lastTime = 0
-volatile long debounce_time = 0;
-volatile long current_time = 0;
 
-// C, eh?
-void displayLoop();
+volatile uint32_t wakeUpMillis = 0;
+volatile uint32_t buttonPressMillis = 0;
+volatile uint32_t debounceMillis = 0;
+volatile bool activelyUsing = false;
+volatile bool pressAcknowledged = false;
+
+bool triggerTimeout = false;
+
+uint32_t currentMillis = 0;
+uint32_t oledMillis = 0;
+uint32_t dataMillis = 0;
+uint32_t wifiMillis = 0;
+
+constexpr auto ACTIVITY_INTERVAL = 1000; //1 s for now
+constexpr auto WAKEUP_INTERVAL = 5000; //5 s for now
+constexpr auto OLED_INTERVAL = 200;
+constexpr auto DATA_INTERVAL = 1000 / SAMPLING_HZ;
+constexpr auto BUTTON_PRESS_DELAY = 200;
+
 void buttonIrq();
+void dataTask();
+void wifiTask();
+void oledTask();
 
 void printLastData()
 {
@@ -40,10 +56,58 @@ void printLastData()
     Serial.println();
 }
 
+// move to a class
+void usleep_init()
+{
+    // create a generic clock generator for the RTC peripheral system with ID 2
+    // set up the 32 kHz oscillator as the input clock
+    GCLK->GENDIV.reg = GCLK_GENDIV_ID(2) |
+                       GCLK_GENDIV_DIV(0);
+    while (GCLK->STATUS.bit.SYNCBUSY);
+
+    GCLK->GENCTRL.reg = GCLK_GENCTRL_GENEN |
+                        GCLK_GENCTRL_SRC_OSCULP32K |
+                        GCLK_GENCTRL_ID(2);
+    while (GCLK->STATUS.bit.SYNCBUSY);
+
+    GCLK->CLKCTRL.reg = (uint32_t) (GCLK_CLKCTRL_CLKEN |
+                        GCLK_CLKCTRL_GEN_GCLK2 |
+                        (RTC_GCLK_ID << GCLK_CLKCTRL_ID_Pos));
+    while (GCLK->STATUS.bit.SYNCBUSY); // TODO: can remove cast?
+}
+
+void usleepz(uint32_t usecs)
+{
+    uint32_t limit = (usecs * 1000) / 30500; // the lowest timestep is 30,5 usec for 32 kHz input
+
+    // disable RTC
+    RTC->MODE0.CTRL.reg &= ~RTC_MODE0_CTRL_ENABLE;
+    RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_SWRST;
+
+    // configure RTC in mode 0 (32-bit counter)
+    RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_PRESCALER_DIV1 | RTC_MODE0_CTRL_MODE_COUNT32;
+    while (RTC->MODE0.STATUS.bit.SYNCBUSY);
+
+    // Initialize counter values
+    RTC->MODE0.COUNT.reg = 0;
+    RTC->MODE0.COMP[0].reg = limit;
+
+    // enable CMP0 interrupt in the RTC
+    RTC->MODE0.INTENSET.reg |= RTC_MODE0_INTENSET_CMP0;
+
+    // enable RTC
+    RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_ENABLE;
+    while (RTC->MODE0.STATUS.bit.SYNCBUSY);
+
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    __DSB();
+    __WFI();
+}
+
 void setup()
 {
-    //Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
-    //while (!Serial);
+    Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
+    while (!Serial);
     delay(200);
 
     if (collector.init() != 0)
@@ -66,33 +130,112 @@ void setup()
     if (display.init() != 0)
         while(1);
 
-    // Start screen update loop
-    Scheduler.startLoop(displayLoop);
-
     // attach the wake-up interrupt from a button
-    pinMode(2, INPUT_PULLUP);
-    attachInterrupt(2, buttonIrq, FALLING);
-}
+    pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(9, INPUT_PULLUP);
+    attachInterrupt(9, buttonIrq, LOW);
 
-void displayLoop()
-{
-    display.update(batch);
-    delay(500);
+    // FAILSAFE wait 20 seconds before going to sleep
+    delay(20000);
+
+    usleep_init();
+
+    triggerTimeout = true;
 }
 
 void buttonIrq()
 {
-    current_time = millis();
-    if ((current_time - debounce_time) > 300)
+    // set up activelyUsing variable
+    wakeUpMillis = millis();
+    buttonPressMillis = wakeUpMillis;
+
+    activelyUsing = true;
+
+    // needs debouncing in the button case
+    if (wakeUpMillis - debounceMillis > BUTTON_PRESS_DELAY)
     {
-        Serial.println("IRQ!");
+        pressAcknowledged = true; // needs handling for OLED display changes
     }
-    debounce_time = current_time;
+    debounceMillis = wakeUpMillis; //millis don't advance in IRQ
 }
 
-// TODO: if time becomes a hindrance -> need to stop doing data processing in the collector
 void loop()
 {
+    // in the main loop
+    // if the loop triggered by a timeout -> start the timer
+    if (triggerTimeout)
+    {
+        wakeUpMillis = millis();
+        triggerTimeout = false;
+    }
+
+    // check the conditions for going back to sleep -> trigger sleeping
+    currentMillis = millis();
+    if (currentMillis - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
+    {
+        digitalWrite(LED_BUILTIN, 0);
+        triggerTimeout = true;
+
+        // prepare other peripherals to sleep here
+        usleepz(500000000);
+    }
+    digitalWrite(LED_BUILTIN, 1);
+
+    // if user using the band: (read user input via the button)
+    if (activelyUsing) // TODO: for now not testing this
+    {
+        // refresh timeout timer
+        wakeUpMillis = millis();
+
+        // check if time has passed since last button press and go to sleep
+        if (currentMillis - buttonPressMillis > WAKEUP_INTERVAL)
+        {
+            Serial.println("Time to sleep ZZZ");
+            activelyUsing = false;
+        }
+
+        // different intervals for data and wifi? TODO: wifi?
+        dataTask();
+
+        // in a fixed interval
+        // update the lcd
+        oledTask();
+
+        Serial.println("Actively using");
+    }
+    else
+    {
+        // in a fixed interval: 125 Hz
+        // collect data
+        dataTask();
+
+        // in a fixed interval
+        // send package over wifi/ble
+        wifiTask();
+    }
+
+
+    /*
+    // TODO: somehow this needs unit 10 times greater than it sleeps?
+    usleepz(50000000);
+
+    digitalWrite(LED_BUILTIN, status);
+    status = !status;
+    ++dupa;
+    // simulate a busy loop
+    //while (!readyToDim)
+    //{
+    //    // turn off the buton IRQ and handle it as a regular input, while last input was not handled long ago
+    //    //
+    //    // need to offload wifi handling and data collection in a separate task
+    //    // if this task in progress, wait for completion and only then exit the loop and go to sleep
+    //    // yield after checking the input etc - so other tasks
+    //    need a button handling code here
+    //}
+    delay(10);
+    // TODO: after adding the clock management code, need to structure the data collection and display loops and test it!!
+    //
+    //
     //Serial.println("REGULAR!");
     //long d = millis() - lastTime;
     //lastTime = millis();
@@ -112,5 +255,36 @@ void loop()
     //printLastData();
     //networkManager.postWiFi()
     yield();
+    */
 }
 
+void dataTask()
+{
+    if (currentMillis - dataMillis > DATA_INTERVAL)
+    {
+        collector.getData();
+        collector.getLastData(batch);
+        printLastData();
+        dataMillis = millis();
+    }
+}
+
+void wifiTask()
+{
+
+}
+
+void oledTask()
+{
+    if (pressAcknowledged)
+    {
+        Serial.println("TODO: change screen");
+        pressAcknowledged = false;
+    }
+
+    if (currentMillis - oledMillis > OLED_INTERVAL) // TODO: greater equal? or consider changing comparison conditions
+    {
+        display.update(batch);
+        oledMillis = millis();
+    }
+}
