@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <Scheduler.h>
 
 #include "Collector.h"
 #include "NetworkManager.h"
@@ -47,7 +46,6 @@ constexpr auto DATA_INTERVAL = 1000 / SAMPLING_HZ;
 constexpr auto BUTTON_PRESS_DELAY = 200;
 
 // C, eh?
-void displayLoop();
 void buttonIrq();
 void dataTask();
 void wifiTask();
@@ -123,9 +121,6 @@ void setup()
     if (display.init() != 0)
         while(1);
 
-    // Start screen update loop
-    //Scheduler.startLoop(displayLoop);
-
     // attach the wake-up interrupt from a button
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(9, INPUT_PULLUP);
@@ -139,33 +134,8 @@ void setup()
     triggerTimeout = true;
 }
 
-void displayLoop()
-{
-    display.update(batch);
-    delay(500);
-}
-
 void buttonIrq()
 {
-    //// TODO: this does not work properly with the deepsleep mode and requires special handling.
-    //// Need to check if it will wake up the MCU instantaneously without any further dancing
-    //// disable this interrupt in the normal operating mode
-
-    //// create an interrupt which will work with the deepsleep mode
-
-    //// poor man's debouncing
-    //current_time = millis();
-    //dupa = 0;
-    //if ((current_time - debounce_time) > IRQ_DELAY)
-    //{
-    //    dupa = 2000;
-    //    // TODO: waking up from sleep with a pushbutton will effectively wake up the screen and
-    //    // make the microcontroller's peripherals run for some predefined time (after the user stopped using the device)
-    //    //Serial.println("IRQ!");
-    //}
-    //debounce_time = current_time;
-
-
     // set up activelyUsing variable
     wakeUpMillis = millis();
     buttonPressMillis = wakeUpMillis;
@@ -183,7 +153,6 @@ void buttonIrq()
 void loop()
 {
     // in the main loop
-
     // if the loop triggered by a timeout -> start the timer
     if (triggerTimeout)
     {
