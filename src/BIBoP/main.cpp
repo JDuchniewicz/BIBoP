@@ -14,15 +14,19 @@
 #include <SPI.h> // required to build wifinina
 #include <ArduinoECCX08.h>
 #include <ArduinoBearSSL.h>
+#include <ArduinoMqttClient.h>
 #include <ACROBOTIC_SSD1306.h>
+
+Batch batch; // for now this is a static container (could be a ring of data)
+Config config(ssid, pass, certificate, broker, incomingTopic, outgoingTopic);
 
 Collector collector;
 Display display;
 WiFiClient lambda;
 BearSSLClient sslLambda(lambda);
-NetworkManager networkManager(sslLambda);
+MqttClient mqttClient(sslLambda);
+NetworkManager networkManager(sslLambda, mqttClient, config);
 
-Batch batch; // for now this is a static container (could be a ring of data)
 //long lastTime = 0
 volatile long debounce_time = 0;
 volatile long current_time = 0;
@@ -42,36 +46,25 @@ void printLastData()
 
 void setup()
 {
-    //Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
-    //while (!Serial);
+    Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
+    while (!Serial);
     delay(200);
 
     if (collector.init() != 0)
         while(1);
 
-    //if (networkManager.init(ssid, pass, lambda_serv, certificate) != 0)
-    //    while(1);
-
-    // TODO add SSL/TLS and retry posting this to the endpoint
-    /*
-    int status = -1;
-    while (status != 0)
-    {
-
-    }
-    */
-    //Serial.println("Attempt sending the payload.");
-    //networkManager.postWiFi(request_body);
-
-    if (display.init() != 0)
+    if (networkManager.init() != 0)
         while(1);
 
-    // Start screen update loop
-    Scheduler.startLoop(displayLoop);
+    //if (display.init() != 0)
+    //    while(1);
 
-    // attach the wake-up interrupt from a button
-    pinMode(2, INPUT_PULLUP);
-    attachInterrupt(2, buttonIrq, FALLING);
+    //// Start screen update loop
+    //Scheduler.startLoop(displayLoop);
+
+    //// attach the wake-up interrupt from a button
+    //pinMode(2, INPUT_PULLUP);
+    //attachInterrupt(2, buttonIrq, FALLING);
 }
 
 void displayLoop()
@@ -93,24 +86,24 @@ void buttonIrq()
 // TODO: if time becomes a hindrance -> need to stop doing data processing in the collector
 void loop()
 {
+    networkManager.postWiFi(request_body);
     //Serial.println("REGULAR!");
     //long d = millis() - lastTime;
     //lastTime = millis();
     //Serial.print("DELAY ");
     //Serial.println(d);
     //Serial.println("looping...");
-    //networkManager.readWiFi();
-    //if (networkManager.serverDisconnectedWiFi())
-    //{
-    //    Serial.println("Disconnected from the server. Client stopped.");
-    //    while (1);
-    //}
+    networkManager.readWiFi();
+    if (networkManager.serverDisconnectedWiFi())
+    {
+        Serial.println("Disconnected from the server. Client stopped.");
+        while (1);
+    }
     // collect the data
-    collector.getData();
-    collector.getLastData(batch);
+    //collector.getData();
+    //collector.getLastData(batch);
     // perform the inference if needed
     //printLastData();
-    //networkManager.postWiFi()
     yield();
 }
 

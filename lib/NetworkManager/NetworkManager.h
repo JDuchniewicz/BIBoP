@@ -4,14 +4,15 @@
 #include <WiFiNINA.h>
 #include <ArduinoBearSSL.h>
 #include <ArduinoECCX08.h>
+#include <ArduinoMqttClient.h>
 
 class NetworkManager
 {
 public:
-    NetworkManager(BearSSLClient& sslLambda);
+    NetworkManager(BearSSLClient& sslLambda, MqttClient& mqttClient, Config& config);
     ~NetworkManager();
 
-    int init(const char* ssid, const char* pass, const char* lambda_serv, const char* certificate);
+    int init();
     int postWiFi(const char* buffer);
     void readWiFi();
     bool serverDisconnectedWiFi();
@@ -20,11 +21,17 @@ private:
     void printWifiData();
     void printCurrentNet();
     void connectWiFi();
+    void connectMqtt();
+    void publishMessage(const char* buffer);
+    void onMqttMessage(int messageLength);
+
     static unsigned long getTime();
+    static void onMqttMessageTrampoline(void* context, int messageLength);
 
     BearSSLClient& sslLambda;
-    const char* m_lambda_serv;
-    const char* m_ssid;
-    const char* m_pass;
+    MqttClient& mqttClient;
+    uint32_t m_lastMillis; //should be long?
+
+    Config m_config;
     int status;
 };
