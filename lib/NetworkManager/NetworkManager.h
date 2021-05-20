@@ -33,6 +33,4 @@ private:
     Config m_config;
     unsigned long m_lastMillis; //should be long?
     unsigned long m_pollMillis;
-
-    int status;
 };

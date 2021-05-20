@@ -55,7 +55,7 @@ int NetworkManager::postWiFi(const char* buffer)
 
 void NetworkManager::readWiFi()
 {
-    if (millis() - m_pollMillis > 1000)
+    if (millis() - m_pollMillis > 1000) // TODO: move timing to outer loop? define constants
     {
         //Serial.println(m_pollMillis);
         //Serial.println("Time to poll");

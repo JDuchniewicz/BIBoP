@@ -119,6 +119,8 @@ void setup()
     if (networkManager.init() != 0)
         while(1);
 
+    display.init();
+
     // attach the wake-up interrupt from a button
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(9, INPUT_PULLUP);
@@ -189,6 +191,10 @@ void loop()
         // update the lcd
         oledTask();
 
+
+        // send package over wifi/ble
+        networkManager.postWiFi(request_body);
+
         Serial.println("Actively using");
     }
     else
@@ -206,32 +212,6 @@ void loop()
     /*
     // TODO: somehow this needs unit 10 times greater than it sleeps?
     usleepz(50000000);
-
-    digitalWrite(LED_BUILTIN, status);
-    status = !status;
-    ++dupa;
-    // simulate a busy loop
-    //while (!readyToDim)
-    //{
-    //    // turn off the buton IRQ and handle it as a regular input, while last input was not handled long ago
-    //    //
-    //    // need to offload wifi handling and data collection in a separate task
-    //    // if this task in progress, wait for completion and only then exit the loop and go to sleep
-    //    // yield after checking the input etc - so other tasks
-    //    need a button handling code here
-    //}
-    delay(10);
-    // TODO: after adding the clock management code, need to structure the data collection and display loops and test it!!
-    //
-    //
-    networkManager.postWiFi(request_body);
-    //Serial.println("REGULAR!");
-    //long d = millis() - lastTime;
-    //lastTime = millis();
-    //Serial.print("DELAY ");
-    //Serial.println(d);
-    //Serial.println("looping...");
-    networkManager.readWiFi();
     if (networkManager.serverDisconnectedWiFi())
     {
         Serial.println("Disconnected from the server. Client stopped.");
@@ -250,7 +230,7 @@ void dataTask()
 {
     if (currentMillis - dataMillis > DATA_INTERVAL)
     {
-        collector.getData();
+        collector.getData(); // FIXME: check why this does not output anything nowI??
         collector.getLastData(batch);
         printLastData();
         dataMillis = millis();
@@ -259,7 +239,8 @@ void dataTask()
 
 void wifiTask()
 {
-
+    networkManager.postWiFi(request_body); // TODO: change to real data
+    networkManager.readWiFi();
 }
 
 void oledTask()
