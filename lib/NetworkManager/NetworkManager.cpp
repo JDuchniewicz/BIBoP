@@ -1,6 +1,6 @@
 #include "NetworkManager.h"
 
-NetworkManager::NetworkManager(BearSSLClient& sslLambda, MqttClient& mqttClient, Config& config) : sslLambda(sslLambda), mqttClient(mqttClient), m_config(config), m_lastMillis(0)
+NetworkManager::NetworkManager(BearSSLClient& sslLambda, MqttClient& mqttClient, Config& config) : sslLambda(sslLambda), mqttClient(mqttClient), m_config(config), m_lastMillis(0), m_pollMillis(0)
 {
 
 }
@@ -43,7 +43,7 @@ int NetworkManager::postWiFi(const char* buffer)
     }
 
     // set up conditions for posting
-    if (millis() - m_lastMillis > 20000)
+    if (millis() - m_lastMillis > 30000)
     {
         m_lastMillis = millis();
         publishMessage(buffer);
@@ -54,11 +54,19 @@ int NetworkManager::postWiFi(const char* buffer)
 
 void NetworkManager::readWiFi()
 {
-    if (!mqttClient.connected())
+    if (millis() - m_pollMillis > 1000)
     {
-        connectMqtt();
+        //Serial.println(m_pollMillis);
+        //Serial.println("Time to poll");
+        m_pollMillis = millis();
+
+        if (!mqttClient.connected())
+        {
+            Serial.println(mqttClient.connectError());
+            connectMqtt();
+        }
+        mqttClient.poll();
     }
-    mqttClient.poll();
 }
 
 bool NetworkManager::serverDisconnectedWiFi()
@@ -126,7 +134,7 @@ void NetworkManager::publishMessage(const char* buffer)
 {
 	Serial.println("Publishing message");
     Serial.println(m_config.outgoingTopic);
-    Serial.println(buffer);
+    //Serial.println(buffer);
 
 	// send message, the Print interface can be used to set the message contents
 	mqttClient.beginMessage(m_config.outgoingTopic, false, 1);
