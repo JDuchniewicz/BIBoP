@@ -1,6 +1,6 @@
 #include "NetworkManager.h"
 
-NetworkManager::NetworkManager(BearSSLClient& sslLambda) : sslLambda(sslLambda)
+NetworkManager::NetworkManager(BearSSLClient& sslLambda, MqttClient& mqttClient, Config& config) : sslLambda(sslLambda), mqttClient(mqttClient), m_config(config), m_lastMillis(0), m_pollMillis(0)
 {
 
 }
@@ -10,7 +10,7 @@ NetworkManager::~NetworkManager()
 
 }
 
-int NetworkManager::init(const char* ssid, const char* pass, const char* lambda_serv, const char* certificate)
+int NetworkManager::init()
 {
     if (!ECCX08.begin())
     {
@@ -19,18 +19,19 @@ int NetworkManager::init(const char* ssid, const char* pass, const char* lambda_
     }
 
     ArduinoBearSSL.onGetTime(NetworkManager::getTime);
-    sslLambda.setEccSlot(0, certificate);
+    sslLambda.setEccSlot(0, m_config.certificate);
 
     if (WiFi.status() == WL_NO_MODULE)
     {
         Serial.println("Communication with WiFi module failed!");
         return -1;
     }
+    mqttClient.setId("BIBOP0");
 
-
-    m_lambda_serv = lambda_serv;
-    m_ssid = ssid;
-    m_pass = pass;
+    mqttClient.onMessage(NetworkManager::onMqttMessageTrampoline);
+    mqttClient.registerOwner(this);
+    mqttClient.setConnectionTimeout(50 * 1000L); // connection timeout?
+    mqttClient.setCleanSession(false);
     return 0;
 }
 
@@ -42,31 +43,30 @@ int NetworkManager::postWiFi(const char* buffer)
         connectWiFi();
     }
 
-    if (!sslLambda.connect(m_lambda_serv, 443))
+    // set up conditions for posting
+    if (millis() - m_lastMillis > 30000)
     {
-        Serial.println("WiFi is disconected! Run init first!");
-        return -1;
+        m_lastMillis = millis();
+        publishMessage(buffer);
     }
-    // success - send the data
-    sslLambda.println("POST /Prod/classify HTTP/1.1");
-    sslLambda.print("Host: ");
-    sslLambda.println(m_lambda_serv);
-    sslLambda.println("content-type: application/json");
-    sslLambda.println("accept: */*");
-    sslLambda.print("content-length: ");
-    sslLambda.println("1658");
-    //lambda.println("connection: close");
-    sslLambda.println();
-    sslLambda.println(buffer);
-    Serial.println("Posted request");
+
     return 0;
 }
 
 void NetworkManager::readWiFi()
 {
-    while (sslLambda.available())
+    if (millis() - m_pollMillis > 1000)
     {
-        Serial.write(sslLambda.read());
+        //Serial.println(m_pollMillis);
+        //Serial.println("Time to poll");
+        m_pollMillis = millis();
+
+        if (!mqttClient.connected())
+        {
+            Serial.println(mqttClient.connectError());
+            connectMqtt();
+        }
+        mqttClient.poll();
     }
 }
 
@@ -102,15 +102,73 @@ void NetworkManager::connectWiFi()
     while (status != WL_CONNECTED)
     {
         Serial.print("Attempting to connect to WPA SSID: ");
-        Serial.println(m_ssid);
-        status = WiFi.begin(m_ssid, m_pass);
+        Serial.println(m_config.ssid);
+        status = WiFi.begin(m_config.ssid, m_config.pass);
         delay(7000);
     }
     Serial.print("Success!");
     printWifiData();
 }
 
+void NetworkManager::connectMqtt()
+{
+	Serial.print("Attempting connection to MQTT broker: ");
+	Serial.print(m_config.broker);
+	Serial.println(" ");
+
+	while (!mqttClient.connect(m_config.broker, 8883))
+	{
+		// failed, retry
+		Serial.print(".");
+		delay(5000);
+	}
+	Serial.println();
+
+	Serial.println("You're connected to the MQTT broker");
+	Serial.println();
+
+	// subscribe to a topic
+	mqttClient.subscribe(m_config.incomingTopic);
+}
+
+void NetworkManager::publishMessage(const char* buffer)
+{
+	Serial.println("Publishing message");
+    Serial.println(m_config.outgoingTopic);
+    //Serial.println(buffer);
+
+	// send message, the Print interface can be used to set the message contents
+	mqttClient.beginMessage(m_config.outgoingTopic, false, 1);
+	//mqttClient.print("{\"data\": \"hello world\"}");
+	mqttClient.print(buffer);
+	int ret = mqttClient.endMessage();
+	Serial.println(ret);
+}
+
 unsigned long NetworkManager::getTime()
 {
     return WiFi.getTime();
+}
+
+void NetworkManager::onMqttMessageTrampoline(void* context, int messageLength)
+{
+    return reinterpret_cast<NetworkManager*>(context)->onMqttMessage(messageLength);
+}
+
+void NetworkManager::onMqttMessage(int messageLength)
+{
+	// we received a message, print out the topic and contents
+	Serial.print("Received a message with topic '");
+	Serial.print(mqttClient.messageTopic());
+	Serial.print("', length ");
+	Serial.print(messageLength);
+	Serial.println(" bytes:");
+
+	// use the Stream interface to print the contents
+	while (mqttClient.available())
+	{
+		Serial.print((char)mqttClient.read());
+	}
+
+	Serial.println();
 }

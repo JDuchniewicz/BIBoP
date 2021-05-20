@@ -13,15 +13,18 @@
 #include <SPI.h> // required to build wifinina
 #include <ArduinoECCX08.h>
 #include <ArduinoBearSSL.h>
+#include <ArduinoMqttClient.h>
 #include <ACROBOTIC_SSD1306.h>
+
+Batch batch; // for now this is a static container (could be a ring of data)
+Config config(ssid, pass, certificate, broker, incomingTopic, outgoingTopic);
 
 Collector collector;
 Display display;
 WiFiClient lambda;
 BearSSLClient sslLambda(lambda);
-NetworkManager networkManager(sslLambda);
-
-Batch batch; // for now this is a static container (could be a ring of data)
+MqttClient mqttClient(sslLambda);
+NetworkManager networkManager(sslLambda, mqttClient, config);
 
 volatile uint32_t wakeUpMillis = 0;
 volatile uint32_t buttonPressMillis = 0;
@@ -113,28 +116,13 @@ void setup()
     if (collector.init() != 0)
         while(1);
 
-    //if (networkManager.init(ssid, pass, lambda_serv, certificate) != 0)
-    //    while(1);
-
-    // TODO add SSL/TLS and retry posting this to the endpoint
-    /*
-    int status = -1;
-    while (status != 0)
-    {
-
-    }
-    */
-    //Serial.println("Attempt sending the payload.");
-    //networkManager.postWiFi(request_body);
-
-    if (display.init() != 0)
+    if (networkManager.init() != 0)
         while(1);
 
     // attach the wake-up interrupt from a button
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(9, INPUT_PULLUP);
     attachInterrupt(9, buttonIrq, LOW);
-
     // FAILSAFE wait 20 seconds before going to sleep
     delay(20000);
 
@@ -236,24 +224,24 @@ void loop()
     // TODO: after adding the clock management code, need to structure the data collection and display loops and test it!!
     //
     //
+    networkManager.postWiFi(request_body);
     //Serial.println("REGULAR!");
     //long d = millis() - lastTime;
     //lastTime = millis();
     //Serial.print("DELAY ");
     //Serial.println(d);
     //Serial.println("looping...");
-    //networkManager.readWiFi();
-    //if (networkManager.serverDisconnectedWiFi())
-    //{
-    //    Serial.println("Disconnected from the server. Client stopped.");
-    //    while (1);
-    //}
+    networkManager.readWiFi();
+    if (networkManager.serverDisconnectedWiFi())
+    {
+        Serial.println("Disconnected from the server. Client stopped.");
+        while (1);
+    }
     // collect the data
-    collector.getData();
-    collector.getLastData(batch);
+    //collector.getData();
+    //collector.getLastData(batch);
     // perform the inference if needed
     //printLastData();
-    //networkManager.postWiFi()
     yield();
     */
 }

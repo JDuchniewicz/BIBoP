@@ -19,3 +19,15 @@ struct Batch
     bool deviceOk;
 };
 
+
+struct Config
+{
+    Config(const char* s, const char* p, const char* c, const char* b, const char* i, const char* o) :
+        ssid(s), pass(p), certificate(c), broker(b), incomingTopic(i), outgoingTopic(o) {}
+    const char* ssid;
+    const char* pass;
+    const char* certificate;
+    const char* broker;
+    const char* incomingTopic;
+    const char* outgoingTopic;
+};

@@ -1,0 +1,166 @@
+diff '--color=auto' -ru ./MqttClient.cpp /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.cpp
+--- ./MqttClient.cpp	2021-05-20 18:12:44.508574521 +0200
++++ /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.cpp	2021-05-20 20:44:34.578816801 +0200
+@@ -19,7 +19,7 @@
+ 
+ #include "MqttClient.h"
+ 
+-#define MQTT_CLIENT_DEBUG
++// #define MQTT_CLIENT_DEBUG
+ 
+ #ifndef htons
+   #ifdef __ARM__
+@@ -29,10 +29,12 @@
+   #endif
+ #endif
+ 
+-#ifdef __AVR__
+-#define TX_PAYLOAD_BUFFER_SIZE 128
+-#else
+-#define TX_PAYLOAD_BUFFER_SIZE 2048 //TODO: maybe more
++#ifndef TX_PAYLOAD_BUFFER_SIZE
++  #ifdef __AVR__
++    #define TX_PAYLOAD_BUFFER_SIZE 128
++  #else
++    #define TX_PAYLOAD_BUFFER_SIZE 256
++  #endif
+ #endif
+ 
+ #define MQTT_CONNECT      1
+@@ -102,12 +104,7 @@
+   }
+ }
+ 
+-void MqttClient::registerOwner(void* owner)
+-{
+-    _owner = owner;
+-}
+-
+-void MqttClient::onMessage(void(*callback)(void*, int))
++void MqttClient::onMessage(void(*callback)(int))
+ {
+   _onMessage = callback;
+ }
+@@ -207,14 +204,8 @@
+ int MqttClient::endMessage()
+ {
+   if (!_txStreamPayload) {
+-    Serial.println("Before ending");
+-    Serial.print("TXPAYLOADBUFFERINDEX : ");
+-    Serial.println(_txPayloadBufferIndex);
+     if (!publishHeader(_txPayloadBufferIndex) ||
+-        (clientWrite(_txPayloadBuffer, _txPayloadBufferIndex) < _txPayloadBufferIndex)) {
+-        Serial.print("TXPAYLOADBUFFERINDEX : ");
+-        Serial.println(_txPayloadBufferIndex);
+-        Serial.println("STOP");
++        (clientWrite(_txPayloadBuffer, _txPayloadBufferIndex) != _txPayloadBufferIndex)) {
+       stop();
+ 
+       return 0;
+@@ -249,14 +240,12 @@
+ 
+     for (unsigned long start = millis(); ((millis() - start) < _connectionTimeout) && clientConnected();) {
+       poll();
+-      //Serial.println("POLLING");
+ 
+       if (_returnCode != -1) {
+         return (_returnCode == 0);
+       }
+     }
+ 
+-    //Serial.println("END POLLING");
+     return 0;
+   }
+ 
+@@ -450,9 +439,9 @@
+         if ((b & 0x80) == 0) { // length done
+           bool malformedResponse = false;
+ 
+-          if (_rxType == MQTT_CONNACK ||
++          if (_rxType == MQTT_CONNACK || 
+               _rxType == MQTT_PUBACK  ||
+-              _rxType == MQTT_PUBREC  ||
++              _rxType == MQTT_PUBREC  || 
+               _rxType == MQTT_PUBCOMP ||
+               _rxType == MQTT_UNSUBACK) {
+             malformedResponse = (_rxFlags != 0x00 || _rxLength != 2);
+@@ -460,7 +449,7 @@
+             malformedResponse = ((_rxFlags & 0x06) == 0x06);
+           } else if (_rxType == MQTT_PUBREL) {
+             malformedResponse = (_rxFlags != 0x02 || _rxLength != 2);
+-          } else if (_rxType == MQTT_SUBACK) {
++          } else if (_rxType == MQTT_SUBACK) { 
+             malformedResponse = (_rxFlags != 0x00 || _rxLength != 3);
+           } else if (_rxType == MQTT_PINGRESP) {
+             malformedResponse = (_rxFlags != 0x00 || _rxLength != 0);
+@@ -533,7 +522,7 @@
+         if (_rxMessageIndex == 2) {
+           _rxMessageTopicLength = (_rxMessageBuffer[0] << 8) | _rxMessageBuffer[1];
+           _rxLength -= 2;
+-
++          
+           _rxMessageTopic = "";
+           _rxMessageTopic.reserve(_rxMessageTopicLength);
+ 
+@@ -568,7 +557,7 @@
+             _rxState = MQTT_CLIENT_RX_STATE_READ_PUBLISH_PAYLOAD;
+ 
+             if (_onMessage) {
+-              _onMessage(_owner, _rxLength);
++              _onMessage(_rxLength);
+ 
+               if (_rxLength == 0) {
+                 _rxState = MQTT_CLIENT_RX_STATE_READ_TYPE;
+@@ -591,7 +580,7 @@
+           _rxState = MQTT_CLIENT_RX_STATE_READ_PUBLISH_PAYLOAD;
+ 
+           if (_onMessage) {
+-            _onMessage(_owner, _rxLength);
++            _onMessage(_rxLength);
+           }
+ 
+           if (_rxLength == 0) {
+@@ -716,7 +705,7 @@
+ 
+       if (b == -1) {
+         break;
+-      }
++      } 
+ 
+       result++;
+       *buf++ = b;
+@@ -1178,8 +1167,5 @@
+   Serial.println();
+ #endif
+ 
+-  size_t written = _client->write(buf, size);
+-  Serial.print("Written to client ");
+-  Serial.println(written);
+-  return written;
++  return _client->write(buf, size);
+ }
+diff '--color=auto' -ru ./MqttClient.h /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.h
+--- ./MqttClient.h	2021-05-20 18:08:53.045156161 +0200
++++ /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.h	2021-05-20 20:44:34.578816801 +0200
+@@ -42,9 +42,7 @@
+   inline void setClient(Client& client) { _client = &client; }
+ 
+ 
+-  // changed by me lol, hackish
+-  void onMessage(void(*)(void*, int));
+-  void registerOwner(void*);
++  void onMessage(void(*)(int));
+ 
+   int parseMessage();
+   String messageTopic() const;
+@@ -135,8 +133,7 @@
+ private:
+   Client* _client;
+ 
+-  void (*_onMessage)(void*, int);
+-  void* _owner; // changed by me (callback hacks)
++  void (*_onMessage)(int);
+ 
+   String _id;
+   String _username;
+Only in .: MqttPatch.patch
