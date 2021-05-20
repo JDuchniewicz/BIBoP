@@ -29,6 +29,7 @@ int NetworkManager::init()
     mqttClient.setId("BIBOP0");
 
     mqttClient.onMessage(NetworkManager::onMqttMessageTrampoline);
+    mqttClient.registerOwner(this);
     mqttClient.setConnectionTimeout(50 * 1000L); // connection timeout?
     mqttClient.setCleanSession(false);
     return 0;
