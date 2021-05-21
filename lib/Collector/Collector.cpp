@@ -12,9 +12,9 @@ Collector::~Collector()
 
 }
 
-int Collector::init()
+int Collector::init(TwoWire& i2c)
 {
-    if (!pulseoximiter.begin(Wire, I2C_SPEED_FAST))
+    if (!pulseoximiter.begin(i2c, I2C_SPEED_FAST))
     {
         Serial.println("No sensor connected!)");
         return -1;

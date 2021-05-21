@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "wiring_private.h"
 
 #include "Collector.h"
 #include "NetworkManager.h"
@@ -25,6 +26,11 @@ WiFiClient lambda;
 BearSSLClient sslLambda(lambda);
 MqttClient mqttClient(sslLambda);
 NetworkManager networkManager(sslLambda, mqttClient, config);
+
+// add a new serial because original one (pins A4 and A5) is hogged by the ECC
+// D5 - SCL - pad 1
+// D6 - SDA - pad 0
+TwoWire sensorI2c(&sercom0, 5, 6);
 
 volatile uint32_t wakeUpMillis = 0;
 volatile uint32_t buttonPressMillis = 0;
@@ -113,13 +119,18 @@ void setup()
     while (!Serial);
     delay(200);
 
-    if (collector.init() != 0)
+    // setup the second I2C bus
+    sensorI2c.begin();
+    pinPeripheral(5, PIO_SERCOM_ALT);
+    pinPeripheral(6, PIO_SERCOM_ALT);
+
+    if (collector.init(sensorI2c) != 0)
         while(1);
 
     if (networkManager.init() != 0)
         while(1);
 
-    display.init();
+    display.init(sensorI2c);
 
     // attach the wake-up interrupt from a button
     pinMode(LED_BUILTIN, OUTPUT);
@@ -193,7 +204,7 @@ void loop()
 
 
         // send package over wifi/ble
-        networkManager.postWiFi(request_body);
+        wifiTask();
 
         Serial.println("Actively using");
     }
@@ -212,17 +223,6 @@ void loop()
     /*
     // TODO: somehow this needs unit 10 times greater than it sleeps?
     usleepz(50000000);
-    if (networkManager.serverDisconnectedWiFi())
-    {
-        Serial.println("Disconnected from the server. Client stopped.");
-        while (1);
-    }
-    // collect the data
-    //collector.getData();
-    //collector.getLastData(batch);
-    // perform the inference if needed
-    //printLastData();
-    yield();
     */
 }
 
@@ -230,7 +230,7 @@ void dataTask()
 {
     if (currentMillis - dataMillis > DATA_INTERVAL)
     {
-        collector.getData(); // FIXME: check why this does not output anything nowI??
+        collector.getData();
         collector.getLastData(batch);
         printLastData();
         dataMillis = millis();

@@ -9,7 +9,7 @@ public:
     Display();
     ~Display();
 
-    int init();
+    int init(TwoWire& i2c);
     int update(const Batch& batch);
 private:
     uint8_t mode;

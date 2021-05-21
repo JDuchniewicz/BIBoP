@@ -10,9 +10,9 @@ Display::~Display()
 
 }
 
-int Display::init()
+int Display::init(TwoWire& i2c)
 {
-    oled.init();
+    oled.init(i2c);
     //oled.setFont(font5x7);
     oled.clearDisplay();
     oled.setTextXY(0, 0);

@@ -10,7 +10,7 @@ public:
     Collector();
     ~Collector();
 
-    int init();
+    int init(TwoWire& i2c);
 
     int getData();
     int readData();
