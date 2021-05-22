@@ -16,6 +16,9 @@ public:
     int readData(Batch& batch);
 
     int getLastData(Batch& batch);
+
+    void collectorOff();
+    void collectorOn();
 private:
     uint32_t redBuffer[BUFSIZE];
     uint32_t irBuffer[BUFSIZE];

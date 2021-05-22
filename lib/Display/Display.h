@@ -11,6 +11,9 @@ public:
 
     int init(TwoWire& i2c);
     int update(const Batch& batch);
+
+    void displayOff();
+    void displayOn();
 private:
     uint8_t mode;
 };

@@ -60,3 +60,13 @@ int Display::update(const Batch& batch)
     }
     return 0;
 }
+
+void Display::displayOn()
+{
+    oled.displayOn();
+}
+
+void Display::displayOff()
+{
+    oled.displayOff();
+}

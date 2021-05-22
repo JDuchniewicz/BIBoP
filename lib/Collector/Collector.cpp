@@ -105,3 +105,13 @@ int Collector::getLastData(Batch& batch)
 
     return 0;
 }
+
+void Collector::collectorOn()
+{
+    pulseoximiter.wakeUp();
+}
+
+void Collector::collectorOff()
+{
+    pulseoximiter.shutDown();
+}

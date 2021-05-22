@@ -76,6 +76,24 @@ void usleep_init()
     while (GCLK->STATUS.bit.SYNCBUSY); // TODO: can remove cast?
 }
 
+void peripheralsOff()
+{
+    display.displayOff();
+    collector.collectorOff();
+
+    // turns off some peripherals for deep sleep mode
+    //PM->APBCMASK.reg &= ~PM_APBCMASK_SERCOM0; // turn off SERCOM0
+    // this prevents the MCU from waking up
+}
+
+void peripheralsOn()
+{
+    display.displayOn();
+    collector.collectorOn();
+
+    //PM->APBCMASK.reg |= PM_APBCMASK_SERCOM0;
+}
+
 void usleepz(uint32_t usecs)
 {
     uint32_t limit = (usecs * 1000) / 30500; // the lowest timestep is 30,5 usec for 32 kHz input
@@ -99,6 +117,7 @@ void usleepz(uint32_t usecs)
     RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_ENABLE;
     while (RTC->MODE0.STATUS.bit.SYNCBUSY);
 
+    peripheralsOff();
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
     __DSB();
     __WFI();
@@ -138,6 +157,7 @@ void setup()
 void buttonIrq()
 {
     // set up activelyUsing variable
+    peripheralsOn();
     wakeUpMillis = millis();
     buttonPressMillis = wakeUpMillis;
 
@@ -169,12 +189,13 @@ void loop()
         triggerTimeout = true;
 
         // prepare other peripherals to sleep here
-        usleepz(500000000);
+        usleepz(500000000); // 5 seconds
+        peripheralsOn();
     }
     digitalWrite(LED_BUILTIN, 1);
 
     // if user using the band: (read user input via the button)
-    if (activelyUsing) // TODO: for now not testing this
+    if (activelyUsing)
     {
         // refresh timeout timer
         wakeUpMillis = millis();
