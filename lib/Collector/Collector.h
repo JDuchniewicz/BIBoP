@@ -13,7 +13,7 @@ public:
     int init(TwoWire& i2c);
 
     int getData();
-    int readData();
+    int readData(Batch& batch);
 
     int getLastData(Batch& batch);
 private:

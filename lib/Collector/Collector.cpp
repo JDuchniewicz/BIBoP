@@ -27,10 +27,15 @@ int Collector::init(TwoWire& i2c)
     return 0;
 }
 
-int Collector::getData()
+int Collector::getData() // it is synchroneously driven, could be via interrupts
 {
     uint32_t red = pulseoximiter.getRed();
     uint32_t ir = pulseoximiter.getIR();
+    //Serial.print(" R: ");
+    //Serial.print(red);
+    //Serial.print(" IR: ");
+    //Serial.print(ir);
+    //Serial.println();
 
     redBuffer[idx % BUFSIZE] = red;
     irBuffer[idx % BUFSIZE] = ir;
@@ -39,8 +44,22 @@ int Collector::getData()
     return 0;
 }
 
-int Collector::readData()
+int Collector::readData(Batch& batch)
 {
+    // read either lower or upper half of the buffer IMPLEMENTATION EASE (or should I say lazyness?)
+    // it does not make a big difference anyway
+
+    if (idx < INFERENCE_BUFSIZE)
+    {
+        batch.ppg_red = redBuffer;
+        batch.ppg_ir = irBuffer;
+        batch.start_idx = 0;
+    } else
+    {
+        batch.ppg_red = &redBuffer[INFERENCE_BUFSIZE - 1];
+        batch.ppg_ir = &irBuffer[INFERENCE_BUFSIZE - 1];
+        batch.start_idx = INFERENCE_BUFSIZE - 1;
+    }
     return 0;
 }
 
@@ -49,8 +68,6 @@ int Collector::getLastData(Batch& batch)
 {
     // TODO: change to a circular buffer
     auto i = (idx % BUFSIZE == 0) ? BUFSIZE - 1 : idx % BUFSIZE - 1;
-    batch.ppg_red = redBuffer[i];
-    batch.ppg_ir = irBuffer[i];
 
     batch.deviceOk = false;
 

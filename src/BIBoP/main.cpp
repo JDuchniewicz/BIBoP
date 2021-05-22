@@ -56,15 +56,6 @@ void dataTask();
 void wifiTask();
 void oledTask();
 
-void printLastData()
-{
-    Serial.print(" R: ");
-    Serial.print(batch.ppg_red);
-    Serial.print(" IR: ");
-    Serial.print(batch.ppg_ir);
-    Serial.println();
-}
-
 // move to a class
 void usleep_init()
 {
@@ -202,7 +193,6 @@ void loop()
         // update the lcd
         oledTask();
 
-
         // send package over wifi/ble
         wifiTask();
 
@@ -231,15 +221,17 @@ void dataTask()
     if (currentMillis - dataMillis > DATA_INTERVAL)
     {
         collector.getData();
+        // obtains latest data and fills the batch for the OLED
         collector.getLastData(batch);
-        printLastData();
         dataMillis = millis();
     }
 }
 
 void wifiTask()
 {
-    networkManager.postWiFi(request_body); // TODO: change to real data
+    // do it periodically only
+    collector.readData(batch);
+    networkManager.postWiFi(batch);
     networkManager.readWiFi();
 }
 

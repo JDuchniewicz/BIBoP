@@ -35,7 +35,7 @@ int NetworkManager::init()
     return 0;
 }
 
-int NetworkManager::postWiFi(const char* buffer)
+int NetworkManager::postWiFi(Batch& batch)
 {
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -44,10 +44,11 @@ int NetworkManager::postWiFi(const char* buffer)
     }
 
     // set up conditions for posting
-    if (millis() - m_lastMillis > 30000)
+    if (millis() - m_lastMillis > 60000)
     {
         m_lastMillis = millis();
-        publishMessage(buffer);
+        prepareMessage(batch);
+        publishMessage(MESSAGE_BUFFER);
     }
 
     return 0;
@@ -143,6 +144,35 @@ void NetworkManager::publishMessage(const char* buffer)
 	mqttClient.print(buffer);
 	int ret = mqttClient.endMessage();
 	Serial.println(ret);
+}
+
+void NetworkManager::prepareMessage(Batch& batch)
+{
+    Serial.println("preparing message");
+    // we could create it using a library, let's do it by hand
+    // write beginning
+    char* buffer_pos = MESSAGE_BUFFER;
+    uint8_t len = 0;
+
+    len = sprintf(buffer_pos, "%s", JSON_BEGIN);
+    buffer_pos += len;
+
+    // write the array body
+    for (uint8_t i = 0; i < INFERENCE_BUFSIZE; ++i)
+    {
+        len = sprintf(buffer_pos, "%lu", batch.ppg_red[batch.start_idx + i]);
+        buffer_pos += len;
+        len = sprintf(buffer_pos, "%s", ", ");
+        buffer_pos += len;
+    }
+    buffer_pos -= 2; // remove last ", "
+
+    // end the array and add string termination
+    len = sprintf(buffer_pos, "%s", JSON_END);
+    buffer_pos += len;
+    sprintf(buffer_pos, "%s", "\0");
+
+    Serial.println(MESSAGE_BUFFER);
 }
 
 unsigned long NetworkManager::getTime()

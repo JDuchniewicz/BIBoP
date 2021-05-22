@@ -13,9 +13,10 @@ public:
     ~NetworkManager();
 
     int init();
-    int postWiFi(const char* buffer);
+    int postWiFi(Batch& batch);
     void readWiFi();
     bool serverDisconnectedWiFi();
+
 
 private:
     void printWifiData();
@@ -25,6 +26,8 @@ private:
     void publishMessage(const char* buffer);
     void onMqttMessage(int messageLength);
 
+    void prepareMessage(Batch& batch);
+
     static unsigned long getTime();
     static void onMqttMessageTrampoline(void* context, int messageLength);
 
@@ -33,4 +36,6 @@ private:
     Config m_config;
     unsigned long m_lastMillis; //should be long?
     unsigned long m_pollMillis;
+
+    char MESSAGE_BUFFER[MESSAGE_BUF_SIZE];
 };
