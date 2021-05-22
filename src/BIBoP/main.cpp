@@ -43,18 +43,24 @@ bool triggerTimeout = false;
 uint32_t currentMillis = 0;
 uint32_t oledMillis = 0;
 uint32_t dataMillis = 0;
-uint32_t wifiMillis = 0;
+uint32_t wifiPostMillis = 0;
+uint32_t wifiPollMillis = 0;
 
 constexpr auto ACTIVITY_INTERVAL = 1000; //1 s for now
-constexpr auto WAKEUP_INTERVAL = 5000; //5 s for now
+constexpr auto WAKEUP_INTERVAL = 10000; //10 s for now
 constexpr auto OLED_INTERVAL = 200;
 constexpr auto DATA_INTERVAL = 1000 / SAMPLING_HZ;
+constexpr auto WIFI_PUBLISH_INTERVAL = 60000; // 60 seconds when using the device
+constexpr auto WIFI_POLL_INTERVAL = 1000;
 constexpr auto BUTTON_PRESS_DELAY = 200;
+//constexpr auto SLEEP_SECONDS;
 
 void buttonIrq();
 void dataTask();
-void wifiTask();
+void wifiActivelyUsingTask();
 void oledTask();
+void wifiSendOnce();
+void wifiPoll();
 
 // move to a class
 void usleep_init()
@@ -185,6 +191,8 @@ void loop()
     currentMillis = millis();
     if (currentMillis - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
     {
+        // send data over wifi before sleeping
+        wifiSendOnce();
         digitalWrite(LED_BUILTIN, 0);
         triggerTimeout = true;
 
@@ -207,15 +215,15 @@ void loop()
             activelyUsing = false;
         }
 
-        // different intervals for data and wifi? TODO: wifi?
+        // different intervals for data and wifi?
         dataTask();
 
         // in a fixed interval
         // update the lcd
         oledTask();
 
-        // send package over wifi/ble
-        wifiTask();
+        // send data in a fixed interval, poll for new packets
+        wifiActivelyUsingTask();
 
         Serial.println("Actively using");
     }
@@ -226,8 +234,8 @@ void loop()
         dataTask();
 
         // in a fixed interval
-        // send package over wifi/ble
-        wifiTask();
+        // poll for incoming packets
+        wifiPoll();
     }
 
 
@@ -248,12 +256,42 @@ void dataTask()
     }
 }
 
-void wifiTask()
+void wifiActivelyUsingTask() // TODO: different frequency of updates when using the device
 {
-    // do it periodically only
+    networkManager.reconnectWiFi();
+    // set up conditions for posting
+    // publish only after some time passed from last check when using actively OR just woke up to collect data (handled separately)
+    if (millis() - wifiPostMillis > WIFI_PUBLISH_INTERVAL)
+    {
+        collector.readData(batch);
+        networkManager.postWiFi(batch);
+        wifiPostMillis = millis();
+    }
+
+    if (millis() - wifiPollMillis > WIFI_POLL_INTERVAL)
+    {
+        networkManager.readWiFi();
+        wifiPollMillis = millis();
+    }
+}
+
+void wifiSendOnce()
+{
+    Serial.println("Oneshot wifi posting because going to sleep");
+    networkManager.reconnectWiFi();
     collector.readData(batch);
     networkManager.postWiFi(batch);
-    networkManager.readWiFi();
+}
+
+void wifiPoll()
+{
+    networkManager.reconnectWiFi();
+
+    if (millis() - wifiPollMillis > WIFI_POLL_INTERVAL)
+    {
+        networkManager.readWiFi();
+        wifiPollMillis = millis();
+    }
 }
 
 void oledTask()

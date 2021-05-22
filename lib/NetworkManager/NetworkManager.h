@@ -15,6 +15,7 @@ public:
     int init();
     int postWiFi(Batch& batch);
     void readWiFi();
+    void reconnectWiFi();
     bool serverDisconnectedWiFi();
 
 

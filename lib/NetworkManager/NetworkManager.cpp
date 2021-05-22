@@ -35,40 +35,30 @@ int NetworkManager::init()
     return 0;
 }
 
-int NetworkManager::postWiFi(Batch& batch)
+void NetworkManager::reconnectWiFi()
 {
     while (WiFi.status() != WL_CONNECTED)
     {
         Serial.println("WiFi is disconected! Reconnecting");
         connectWiFi();
     }
+}
 
-    // set up conditions for posting
-    if (millis() - m_lastMillis > 60000)
-    {
-        m_lastMillis = millis();
-        prepareMessage(batch);
-        publishMessage(MESSAGE_BUFFER);
-    }
-
+int NetworkManager::postWiFi(Batch& batch)
+{
+    prepareMessage(batch);
+    publishMessage(MESSAGE_BUFFER);
     return 0;
 }
 
 void NetworkManager::readWiFi()
 {
-    if (millis() - m_pollMillis > 1000) // TODO: move timing to outer loop? define constants
+    if (!mqttClient.connected())
     {
-        //Serial.println(m_pollMillis);
-        //Serial.println("Time to poll");
-        m_pollMillis = millis();
-
-        if (!mqttClient.connected())
-        {
-            Serial.println(mqttClient.connectError());
-            connectMqtt();
-        }
-        mqttClient.poll();
+        Serial.println(mqttClient.connectError());
+        connectMqtt();
     }
+    mqttClient.poll();
 }
 
 bool NetworkManager::serverDisconnectedWiFi()
