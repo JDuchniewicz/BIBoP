@@ -47,13 +47,14 @@ uint32_t wifiPostMillis = 0;
 uint32_t wifiPollMillis = 0;
 
 constexpr auto ACTIVITY_INTERVAL = 1000; //1 s for now
-constexpr auto WAKEUP_INTERVAL = 10000; //10 s for now
+constexpr auto WAKEUP_INTERVAL = 30000; //30 s for now
 constexpr auto OLED_INTERVAL = 200;
 constexpr auto DATA_INTERVAL = 1000 / SAMPLING_HZ;
 constexpr auto WIFI_PUBLISH_INTERVAL = 60000; // 60 seconds when using the device
 constexpr auto WIFI_POLL_INTERVAL = 1000;
 constexpr auto BUTTON_PRESS_DELAY = 200;
-//constexpr auto SLEEP_SECONDS;
+constexpr auto SECOND = 100000000;
+constexpr auto SLEEP_SECONDS = 5 * SECOND;
 
 void buttonIrq();
 void dataTask();
@@ -177,6 +178,8 @@ void buttonIrq()
     debounceMillis = wakeUpMillis; //millis don't advance in IRQ
 }
 
+// TODO: add sleep enable button
+
 void loop()
 {
     // in the main loop
@@ -197,7 +200,7 @@ void loop()
         triggerTimeout = true;
 
         // prepare other peripherals to sleep here
-        usleepz(500000000); // 5 seconds
+        usleepz(SLEEP_SECONDS); // 5 seconds
         peripheralsOn();
     }
     digitalWrite(LED_BUILTIN, 1);
