@@ -56,8 +56,8 @@ constexpr auto DATA_INTERVAL = 1000 / SAMPLING_HZ;
 constexpr auto WIFI_PUBLISH_INTERVAL = 60000; // 60 seconds when using the device
 constexpr auto WIFI_POLL_INTERVAL = 1000;
 constexpr auto BUTTON_PRESS_DELAY = 200;
-constexpr auto SECOND = 100000000;
-constexpr auto SLEEP_SECONDS = 5 * SECOND;
+constexpr auto SECOND = 1000000;
+constexpr auto SLEEP_TIME = 60 * SECOND;
 
 void buttonIrq();
 void dataTask();
@@ -106,7 +106,8 @@ void peripheralsOn()
 
 void usleepz(uint32_t usecs)
 {
-    uint32_t limit = (usecs * 1000) / 30500; // the lowest timestep is 30,5 usec for 32 kHz input
+    // CARE FOR OVERFLOWS
+    uint32_t limit = (usecs * 10) / 305; // the lowest timestep is 30,5 usec for 32 kHz input
 
     // disable RTC
     RTC->MODE0.CTRL.reg &= ~RTC_MODE0_CTRL_ENABLE;
@@ -206,7 +207,7 @@ void loop()
         triggerTimeout = true;
 
         // prepare other peripherals to sleep here
-        usleepz(SLEEP_SECONDS); // 5 seconds
+        usleepz(SLEEP_TIME); // 5 seconds
         peripheralsOn();
     }
     digitalWrite(LED_BUILTIN, 1);
