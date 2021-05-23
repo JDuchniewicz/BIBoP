@@ -94,7 +94,7 @@ void NetworkManager::connectWiFi()
         delay(7000);
     }
     print("Success!\n");
-    printWifiData();
+    //printWifiData(); // no need to print it
 }
 
 void NetworkManager::connectMqtt()

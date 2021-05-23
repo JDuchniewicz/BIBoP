@@ -207,8 +207,8 @@ void loop()
         triggerTimeout = true;
 
         // prepare other peripherals to sleep here
-        usleepz(SLEEP_TIME); // 5 seconds
-        peripheralsOn();
+        usleepz(SLEEP_TIME);
+        collector.collectorOn(); // turn on only the collector (no need to wake up the screen for just data collection)
     }
     digitalWrite(LED_BUILTIN, 1);
 
@@ -247,12 +247,6 @@ void loop()
         // poll for incoming packets
         wifiPoll();
     }
-
-
-    /*
-    // TODO: somehow this needs unit 10 times greater than it sleeps?
-    usleepz(50000000);
-    */
 }
 
 void dataTask()
