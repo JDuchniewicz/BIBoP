@@ -175,5 +175,5 @@ void NetworkManager::onMqttMessage(int messageLength)
 	{
 		print("%c", (char)mqttClient.read());
 	}
-
+    print("\n");
 }

@@ -17,8 +17,7 @@
 #include <ArduinoMqttClient.h>
 #include <ACROBOTIC_SSD1306.h>
 
-// to enable logging
-#define DEBUG
+// buffer for logging
 char PRINT_BUFFER[PRINTBUF_SIZE];
 
 Batch batch; // for now this is a static container (could be a ring of data)
@@ -136,10 +135,11 @@ void usleepz(uint32_t usecs)
 
 void setup()
 {
-#ifdef DEBUG
-    Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
-    while (!Serial);
-#endif
+    if constexpr(DEBUG)
+    {
+        Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
+        while (!Serial);
+    }
     delay(200);
 
     // setup the second I2C bus

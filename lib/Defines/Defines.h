@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <Arduino.h>
 #include <Wire.h>
+
+// controls if it should do logging
+constexpr auto DEBUG = true;
+
 // all the defines will be stored here
 constexpr auto SAMPLING_HZ = 125;
 constexpr auto INFERENCE_BUFSIZE = SAMPLING_HZ;
@@ -18,15 +22,14 @@ constexpr auto JSON_END = "]\n}";
 constexpr auto PRINTBUF_SIZE = 50;
 extern char PRINT_BUFFER[PRINTBUF_SIZE];
 
-#define DEBUG
-
 template <typename... T>
 void print(const char* str, T... args)
 {
-#ifdef DEBUG
-    sprintf(PRINT_BUFFER, str, args...);
-    Serial.print(PRINT_BUFFER);
-#endif
+    if constexpr(DEBUG)
+    {
+        sprintf(PRINT_BUFFER, str, args...);
+        Serial.print(PRINT_BUFFER);
+    }
 }
 
 struct Batch
