@@ -14,7 +14,7 @@ int NetworkManager::init()
 {
     if (!ECCX08.begin())
     {
-        Serial.println("Could not initialize ECCX08!");
+        print("Could not initialize ECCX08!\n");
         return -1;
     }
 
@@ -23,7 +23,7 @@ int NetworkManager::init()
 
     if (WiFi.status() == WL_NO_MODULE)
     {
-        Serial.println("Communication with WiFi module failed!");
+        print("Communication with WiFi module failed!\n");
         return -1;
     }
     mqttClient.setId("BIBOP0");
@@ -39,7 +39,7 @@ void NetworkManager::reconnectWiFi()
 {
     while (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("WiFi is disconected! Reconnecting");
+        print("WiFi is disconected! Reconnecting\n");
         connectWiFi();
     }
 }
@@ -55,7 +55,7 @@ void NetworkManager::readWiFi()
 {
     if (!mqttClient.connected())
     {
-        Serial.println(mqttClient.connectError());
+        print("%d", mqttClient.connectError());
         connectMqtt();
     }
     mqttClient.poll();
@@ -75,15 +75,12 @@ bool NetworkManager::serverDisconnectedWiFi()
 void NetworkManager::printWifiData()
 {
    IPAddress ip = WiFi.localIP();
-   Serial.print("IPAddress:");
-   Serial.println(ip);
-   Serial.println(ip);
+   print("IPAddress: %s\n", ip); // not a string lol
 }
 
 void NetworkManager::printCurrentNet()
 {
-    Serial.print("SSID:");
-    Serial.println(WiFi.SSID());
+    print("SSID: %s\n", WiFi.SSID());
 }
 
 void NetworkManager::connectWiFi()
@@ -92,31 +89,26 @@ void NetworkManager::connectWiFi()
 
     while (status != WL_CONNECTED)
     {
-        Serial.print("Attempting to connect to WPA SSID: ");
-        Serial.println(m_config.ssid);
+        print("Attempting to connect to WPA SSID: %s\n", m_config.ssid);
         status = WiFi.begin(m_config.ssid, m_config.pass);
         delay(7000);
     }
-    Serial.print("Success!");
+    print("Success!\n");
     printWifiData();
 }
 
 void NetworkManager::connectMqtt()
 {
-	Serial.print("Attempting connection to MQTT broker: ");
-	Serial.print(m_config.broker);
-	Serial.println(" ");
+	print("Attempting connection to MQTT broker: %s \n", m_config.broker);
 
 	while (!mqttClient.connect(m_config.broker, 8883))
 	{
 		// failed, retry
-		Serial.print(".");
+		print(".");
 		delay(5000);
 	}
-	Serial.println();
 
-	Serial.println("You're connected to the MQTT broker");
-	Serial.println();
+	print("You're connected to the MQTT broker\n");
 
 	// subscribe to a topic
 	mqttClient.subscribe(m_config.incomingTopic);
@@ -124,21 +116,18 @@ void NetworkManager::connectMqtt()
 
 void NetworkManager::publishMessage(const char* buffer)
 {
-	Serial.println("Publishing message");
-    Serial.println(m_config.outgoingTopic);
-    //Serial.println(buffer);
+	print("Publishing message %s\n", m_config.outgoingTopic);
 
 	// send message, the Print interface can be used to set the message contents
 	mqttClient.beginMessage(m_config.outgoingTopic, false, 1);
 	//mqttClient.print("{\"data\": \"hello world\"}");
 	mqttClient.print(buffer);
-	int ret = mqttClient.endMessage();
-	Serial.println(ret);
+	mqttClient.endMessage();
 }
 
 void NetworkManager::prepareMessage(Batch& batch)
 {
-    Serial.println("preparing message");
+    print("preparing message\n");
     // we could create it using a library, let's do it by hand
     // write beginning
     char* buffer_pos = MESSAGE_BUFFER;
@@ -162,7 +151,8 @@ void NetworkManager::prepareMessage(Batch& batch)
     buffer_pos += len;
     sprintf(buffer_pos, "%s", "\0");
 
-    Serial.println(MESSAGE_BUFFER);
+    // TO SMALL print buffer for printing via my
+    //print(MESSAGE_BUFFER);
 }
 
 unsigned long NetworkManager::getTime()
@@ -178,17 +168,12 @@ void NetworkManager::onMqttMessageTrampoline(void* context, int messageLength)
 void NetworkManager::onMqttMessage(int messageLength)
 {
 	// we received a message, print out the topic and contents
-	Serial.print("Received a message with topic '");
-	Serial.print(mqttClient.messageTopic());
-	Serial.print("', length ");
-	Serial.print(messageLength);
-	Serial.println(" bytes:");
+	print("Received a message with topic '%s', length %d, bytes: \n", mqttClient.messageTopic().c_str(), messageLength);
 
 	// use the Stream interface to print the contents
 	while (mqttClient.available())
 	{
-		Serial.print((char)mqttClient.read());
+		print("%c", (char)mqttClient.read());
 	}
 
-	Serial.println();
 }

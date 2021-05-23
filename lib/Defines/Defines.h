@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+#include <Arduino.h>
+#include <Wire.h>
 // all the defines will be stored here
 constexpr auto SAMPLING_HZ = 125;
 constexpr auto INFERENCE_BUFSIZE = SAMPLING_HZ;
@@ -12,6 +14,20 @@ constexpr auto HR_AVG_WIN_SIZE = 4;
 
 constexpr auto JSON_BEGIN = "{\n    \"data\": [";
 constexpr auto JSON_END = "]\n}";
+
+constexpr auto PRINTBUF_SIZE = 50;
+extern char PRINT_BUFFER[PRINTBUF_SIZE];
+
+#define DEBUG
+
+template <typename... T>
+void print(const char* str, T... args)
+{
+#ifdef DEBUG
+    sprintf(PRINT_BUFFER, str, args...);
+    Serial.print(PRINT_BUFFER);
+#endif
+}
 
 struct Batch
 {

@@ -17,6 +17,10 @@
 #include <ArduinoMqttClient.h>
 #include <ACROBOTIC_SSD1306.h>
 
+// to enable logging
+#define DEBUG
+char PRINT_BUFFER[PRINTBUF_SIZE];
+
 Batch batch; // for now this is a static container (could be a ring of data)
 Config config(ssid, pass, certificate, broker, incomingTopic, outgoingTopic);
 
@@ -132,8 +136,10 @@ void usleepz(uint32_t usecs)
 
 void setup()
 {
+#ifdef DEBUG
     Serial.begin(115200); // this causes the stall of the program if there is no Serial connected
     while (!Serial);
+#endif
     delay(200);
 
     // setup the second I2C bus
@@ -214,7 +220,7 @@ void loop()
         // check if time has passed since last button press and go to sleep
         if (currentMillis - buttonPressMillis > WAKEUP_INTERVAL)
         {
-            Serial.println("Time to sleep ZZZ");
+            print("Time to sleep ZZZ\n");
             activelyUsing = false;
         }
 
@@ -228,7 +234,7 @@ void loop()
         // send data in a fixed interval, poll for new packets
         wifiActivelyUsingTask();
 
-        Serial.println("Actively using");
+        print("Actively using\n");
     }
     else
     {
@@ -280,7 +286,7 @@ void wifiActivelyUsingTask() // TODO: different frequency of updates when using 
 
 void wifiSendOnce()
 {
-    Serial.println("Oneshot wifi posting because going to sleep");
+    print("Oneshot wifi posting because going to sleep\n");
     networkManager.reconnectWiFi();
     collector.readData(batch);
     networkManager.postWiFi(batch);
@@ -301,7 +307,7 @@ void oledTask()
 {
     if (pressAcknowledged)
     {
-        Serial.println("TODO: change screen");
+        print("TODO: change screen\n");
         pressAcknowledged = false;
     }
 

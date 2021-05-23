@@ -16,7 +16,7 @@ int Collector::init(TwoWire& i2c)
 {
     if (!pulseoximiter.begin(i2c, I2C_SPEED_FAST))
     {
-        Serial.println("No sensor connected!)");
+        print("No sensor connected!\n");
         return -1;
     }
 
@@ -31,11 +31,7 @@ int Collector::getData() // it is synchroneously driven, could be via interrupts
 {
     uint32_t red = pulseoximiter.getRed();
     uint32_t ir = pulseoximiter.getIR();
-    //Serial.print(" R: ");
-    //Serial.print(red);
-    //Serial.print(" IR: ");
-    //Serial.print(ir);
-    //Serial.println();
+    //print("R: %ul IR: %ul", red, ir);
 
     redBuffer[idx % BUFSIZE] = red;
     irBuffer[idx % BUFSIZE] = ir;
@@ -78,13 +74,13 @@ int Collector::getLastData(Batch& batch)
 
         if (checkForBeat(irBuffer[i]))
         {
-            //Serial.println("FOOUND BEAT");
-            //Serial.println(irBuffer[i]);
+            //print("FOOUND BEAT");
+            //print(irBuffer[i]);
             long delta = millis() - m_lastBeat;
             m_lastBeat = millis();
 
             float beatsPerMinute = (60 / (delta / 1000.0));
-            //Serial.println(beatsPerMinute);
+            //print(beatsPerMinute);
 
             batch.beatsPerMinute = beatsPerMinute;
 
