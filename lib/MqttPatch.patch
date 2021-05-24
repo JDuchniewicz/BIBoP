@@ -1,11 +1,11 @@
-diff '--color=auto' -ru ./MqttClient.cpp /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.cpp
---- ./MqttClient.cpp	2021-05-20 18:12:44.508574521 +0200
+diff '--color=auto' -ru ArduinoMqttClient/src/MqttClient.cpp /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.cpp
+--- ArduinoMqttClient/src/MqttClient.cpp	2021-05-21 09:49:14.526902464 +0200
 +++ /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.cpp	2021-05-20 20:44:34.578816801 +0200
 @@ -19,7 +19,7 @@
  
  #include "MqttClient.h"
  
--#define MQTT_CLIENT_DEBUG
+-//#define MQTT_CLIENT_DEBUG
 +// #define MQTT_CLIENT_DEBUG
  
  #ifndef htons
@@ -45,14 +45,14 @@ diff '--color=auto' -ru ./MqttClient.cpp /home/jduchniewicz/Projects/OpenSourceF
  int MqttClient::endMessage()
  {
    if (!_txStreamPayload) {
--    Serial.println("Before ending");
--    Serial.print("TXPAYLOADBUFFERINDEX : ");
--    Serial.println(_txPayloadBufferIndex);
+-    //Serial.println("Before ending");
+-    //Serial.print("TXPAYLOADBUFFERINDEX : ");
+-    //Serial.println(_txPayloadBufferIndex);
      if (!publishHeader(_txPayloadBufferIndex) ||
 -        (clientWrite(_txPayloadBuffer, _txPayloadBufferIndex) < _txPayloadBufferIndex)) {
--        Serial.print("TXPAYLOADBUFFERINDEX : ");
--        Serial.println(_txPayloadBufferIndex);
--        Serial.println("STOP");
+-        //Serial.print("TXPAYLOADBUFFERINDEX : ");
+-        //Serial.println(_txPayloadBufferIndex);
+-        //Serial.println("STOP");
 +        (clientWrite(_txPayloadBuffer, _txPayloadBufferIndex) != _txPayloadBufferIndex)) {
        stop();
  
@@ -134,13 +134,13 @@ diff '--color=auto' -ru ./MqttClient.cpp /home/jduchniewicz/Projects/OpenSourceF
  #endif
  
 -  size_t written = _client->write(buf, size);
--  Serial.print("Written to client ");
--  Serial.println(written);
+-  //Serial.print("Written to client ");
+-  //Serial.println(written);
 -  return written;
 +  return _client->write(buf, size);
  }
-diff '--color=auto' -ru ./MqttClient.h /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.h
---- ./MqttClient.h	2021-05-20 18:08:53.045156161 +0200
+diff '--color=auto' -ru ArduinoMqttClient/src/MqttClient.h /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.h
+--- ArduinoMqttClient/src/MqttClient.h	2021-05-22 12:31:06.483101061 +0200
 +++ /home/jduchniewicz/Projects/OpenSourceFixes/ArduinoMqttClient/src/MqttClient.h	2021-05-20 20:44:34.578816801 +0200
 @@ -42,9 +42,7 @@
    inline void setClient(Client& client) { _client = &client; }
@@ -163,4 +163,3 @@ diff '--color=auto' -ru ./MqttClient.h /home/jduchniewicz/Projects/OpenSourceFix
  
    String _id;
    String _username;
-Only in .: MqttPatch.patch
