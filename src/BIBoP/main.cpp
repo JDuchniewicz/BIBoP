@@ -36,14 +36,12 @@ NetworkManager networkManager(sslLambda, mqttClient, config);
 TwoWire sensorI2c(&sercom0, 5, 6);
 
 volatile uint32_t wakeUpMillis = 0;
-volatile uint32_t buttonPressMillis = 0;
 volatile uint32_t debounceMillis = 0;
 volatile bool activelyUsing = false;
 volatile bool pressAcknowledged = false;
 
 bool triggerTimeout = false;
 
-uint32_t currentMillis = 0;
 uint32_t oledMillis = 0;
 uint32_t dataMillis = 0;
 uint32_t wifiPostMillis = 0;
@@ -170,24 +168,22 @@ void setup()
 
 void buttonIrq()
 {
-    // set up activelyUsing variable
-    wakeUpMillis = millis();
-
     // needs debouncing in the button case
-    if (wakeUpMillis - debounceMillis > BUTTON_PRESS_DELAY)
+    if (millis() - debounceMillis > BUTTON_PRESS_DELAY)
     {
         peripheralsOn();
-        buttonPressMillis = wakeUpMillis;
+        debounceMillis = millis();
         activelyUsing = true;
         //pressAcknowledged = true; // needs handling for OLED display changes
+        print("yes, yes, yes \n");
     }
-    debounceMillis = wakeUpMillis; //millis don't advance in IRQ
 }
 
 // TODO: add sleep enable button
 
 void loop()
 {
+    print("looping\n");
     // in the main loop
     // if the loop triggered by a timeout -> start the timer
     if (triggerTimeout)
@@ -197,8 +193,7 @@ void loop()
     }
 
     // check the conditions for going back to sleep -> trigger sleeping
-    currentMillis = millis();
-    if (currentMillis - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
+    if (millis() - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
     {
         // send data over wifi before sleeping
         //wifiSendOnce();
@@ -215,11 +210,6 @@ void loop()
     // if user using the band: (read user input via the button)
     if (activelyUsing)
     {
-        print("Actively using\n");
-
-        // refresh timeout timer
-        wakeUpMillis = millis();
-
         // different intervals for data and wifi?
         dataTask();
 
@@ -231,15 +221,19 @@ void loop()
         //wifiActivelyUsingTask();
 
         // check if time has passed since last button press and go to sleep
-        if (currentMillis - buttonPressMillis > WAKEUP_INTERVAL)
+        if (millis() - debounceMillis > WAKEUP_INTERVAL)
         {
+            print("Currentmilis %ld\n", millis());
+            print("Buttonpress %ld\n", debounceMillis);
             print("Time to sleep ZZZ\n");
             activelyUsing = false;
         }
+
+        // refresh timeout timer only after doing all menial tasks (prevents lockups)
+        wakeUpMillis = millis();
     }
     else
     {
-        print("Regular wakeup\n");
         // in a fixed interval: 125 Hz
         // collect data
         dataTask();
@@ -252,7 +246,7 @@ void loop()
 
 void dataTask()
 {
-    if (currentMillis - dataMillis > DATA_INTERVAL)
+    if (millis() - dataMillis > DATA_INTERVAL)
     {
         collector.getData();
         // obtains latest data and fills the batch for the OLED
@@ -263,11 +257,12 @@ void dataTask()
 
 void wifiActivelyUsingTask() // TODO: different frequency of updates when using the device
 {
-    networkManager.reconnectWiFi();
     // set up conditions for posting
     // publish only after some time passed from last check when using actively OR just woke up to collect data (handled separately)
     if (millis() - wifiPostMillis > WIFI_PUBLISH_INTERVAL)
     {
+        print("Actively using wifi push\n");
+        networkManager.reconnectWiFi();
         collector.readData(batch);
         networkManager.postWiFi(batch);
         wifiPostMillis = millis();
@@ -275,6 +270,8 @@ void wifiActivelyUsingTask() // TODO: different frequency of updates when using 
 
     if (millis() - wifiPollMillis > WIFI_POLL_INTERVAL)
     {
+        print("Actively using wifi poll\n");
+        networkManager.reconnectWiFi();
         networkManager.readWiFi();
         wifiPollMillis = millis();
     }
@@ -290,10 +287,10 @@ void wifiSendOnce()
 
 void wifiPoll()
 {
-    networkManager.reconnectWiFi();
-
     if (millis() - wifiPollMillis > WIFI_POLL_INTERVAL)
     {
+        print("Actively using wifi poll\n");
+        networkManager.reconnectWiFi();
         networkManager.readWiFi();
         wifiPollMillis = millis();
     }
@@ -307,7 +304,7 @@ void oledTask()
     //    pressAcknowledged = false;
     //}
 
-    if (currentMillis - oledMillis > OLED_INTERVAL) // TODO: greater equal? or consider changing comparison conditions
+    if (millis() - oledMillis > OLED_INTERVAL) // TODO: greater equal? or consider changing comparison conditions
     {
         display.update(batch);
         oledMillis = millis();
