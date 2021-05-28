@@ -55,7 +55,7 @@ constexpr auto WIFI_PUBLISH_INTERVAL = 60000; // 60 seconds when using the devic
 constexpr auto WIFI_POLL_INTERVAL = 1000;
 constexpr auto BUTTON_PRESS_DELAY = 200;
 constexpr auto SECOND = 1000000;
-constexpr auto SLEEP_TIME = 90 * SECOND; // 90 seconds?
+constexpr auto SLEEP_TIME = 10 * SECOND; // 90 seconds? TODO: 10 seconds for now
 
 void buttonIrq();
 void dataTask();
@@ -127,9 +127,11 @@ void usleepz(uint32_t usecs)
     while (RTC->MODE0.STATUS.bit.SYNCBUSY);
 
     peripheralsOff();
+    SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;           // Disable SysTick interrupts
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
     __DSB();
     __WFI();
+    SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;           // Enable SysTick interrupts
 }
 
 void setup()
@@ -166,12 +168,12 @@ void setup()
     triggerTimeout = true;
 }
 
+// cannot use I2C stuff in IRQ's as it uses clock
 void buttonIrq()
 {
     // needs debouncing in the button case
     if (millis() - debounceMillis > BUTTON_PRESS_DELAY)
     {
-        peripheralsOn();
         debounceMillis = millis();
         activelyUsing = true;
         //pressAcknowledged = true; // needs handling for OLED display changes
@@ -183,7 +185,7 @@ void buttonIrq()
 
 void loop()
 {
-    print("looping\n");
+    //print("looping\n");
     // in the main loop
     // if the loop triggered by a timeout -> start the timer
     if (triggerTimeout)
@@ -210,6 +212,7 @@ void loop()
     // if user using the band: (read user input via the button)
     if (activelyUsing)
     {
+        peripheralsOn();
         // different intervals for data and wifi?
         dataTask();
 
@@ -227,6 +230,7 @@ void loop()
             print("Buttonpress %ld\n", debounceMillis);
             print("Time to sleep ZZZ\n");
             activelyUsing = false;
+            display.displayOff();
         }
 
         // refresh timeout timer only after doing all menial tasks (prevents lockups)
