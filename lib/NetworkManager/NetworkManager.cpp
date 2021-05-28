@@ -105,7 +105,7 @@ void NetworkManager::connectMqtt()
 	{
 		// failed, retry
 		print(".");
-		delay(5000);
+		delay(1000);
 	}
 
 	print("You're connected to the MQTT broker\n");

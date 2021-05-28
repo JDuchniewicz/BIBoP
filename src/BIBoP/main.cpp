@@ -57,7 +57,7 @@ constexpr auto WIFI_PUBLISH_INTERVAL = 60000; // 60 seconds when using the devic
 constexpr auto WIFI_POLL_INTERVAL = 1000;
 constexpr auto BUTTON_PRESS_DELAY = 200;
 constexpr auto SECOND = 1000000;
-constexpr auto SLEEP_TIME = 60 * SECOND;
+constexpr auto SLEEP_TIME = 90 * SECOND; // 90 seconds?
 
 void buttonIrq();
 void dataTask();
@@ -117,7 +117,7 @@ void usleepz(uint32_t usecs)
     RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_PRESCALER_DIV1 | RTC_MODE0_CTRL_MODE_COUNT32;
     while (RTC->MODE0.STATUS.bit.SYNCBUSY);
 
-    // Initialize counter values
+    //// Initialize counter values
     RTC->MODE0.COUNT.reg = 0;
     RTC->MODE0.COMP[0].reg = limit;
 
@@ -160,8 +160,8 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(9, INPUT_PULLUP);
     attachInterrupt(9, buttonIrq, LOW);
-    // FAILSAFE wait 20 seconds before going to sleep
-    delay(20000);
+    // FAILSAFE wait 12 seconds before going to sleep
+    delay(12000);
 
     usleep_init();
 
@@ -171,16 +171,15 @@ void setup()
 void buttonIrq()
 {
     // set up activelyUsing variable
-    peripheralsOn();
     wakeUpMillis = millis();
-    buttonPressMillis = wakeUpMillis;
-
-    activelyUsing = true;
 
     // needs debouncing in the button case
     if (wakeUpMillis - debounceMillis > BUTTON_PRESS_DELAY)
     {
-        pressAcknowledged = true; // needs handling for OLED display changes
+        peripheralsOn();
+        buttonPressMillis = wakeUpMillis;
+        activelyUsing = true;
+        //pressAcknowledged = true; // needs handling for OLED display changes
     }
     debounceMillis = wakeUpMillis; //millis don't advance in IRQ
 }
@@ -202,28 +201,24 @@ void loop()
     if (currentMillis - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
     {
         // send data over wifi before sleeping
-        wifiSendOnce();
+        //wifiSendOnce();
         digitalWrite(LED_BUILTIN, 0);
         triggerTimeout = true;
 
         // prepare other peripherals to sleep here
         usleepz(SLEEP_TIME);
         collector.collectorOn(); // turn on only the collector (no need to wake up the screen for just data collection)
+        print("Time to sleep ZZZ - now for realz\n");
     }
     digitalWrite(LED_BUILTIN, 1);
 
     // if user using the band: (read user input via the button)
     if (activelyUsing)
     {
+        print("Actively using\n");
+
         // refresh timeout timer
         wakeUpMillis = millis();
-
-        // check if time has passed since last button press and go to sleep
-        if (currentMillis - buttonPressMillis > WAKEUP_INTERVAL)
-        {
-            print("Time to sleep ZZZ\n");
-            activelyUsing = false;
-        }
 
         // different intervals for data and wifi?
         dataTask();
@@ -233,19 +228,25 @@ void loop()
         oledTask();
 
         // send data in a fixed interval, poll for new packets
-        wifiActivelyUsingTask();
+        //wifiActivelyUsingTask();
 
-        print("Actively using\n");
+        // check if time has passed since last button press and go to sleep
+        if (currentMillis - buttonPressMillis > WAKEUP_INTERVAL)
+        {
+            print("Time to sleep ZZZ\n");
+            activelyUsing = false;
+        }
     }
     else
     {
+        print("Regular wakeup\n");
         // in a fixed interval: 125 Hz
         // collect data
         dataTask();
 
         // in a fixed interval
         // poll for incoming packets
-        wifiPoll();
+        //wifiPoll();
     }
 }
 
@@ -300,11 +301,11 @@ void wifiPoll()
 
 void oledTask()
 {
-    if (pressAcknowledged)
-    {
-        print("TODO: change screen\n");
-        pressAcknowledged = false;
-    }
+    //if (pressAcknowledged)
+    //{
+    //    print("TODO: change screen\n");
+    //    pressAcknowledged = false;
+    //}
 
     if (currentMillis - oledMillis > OLED_INTERVAL) // TODO: greater equal? or consider changing comparison conditions
     {
