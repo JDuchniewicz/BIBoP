@@ -39,6 +39,7 @@ volatile uint32_t wakeUpMillis = 0;
 volatile uint32_t debounceMillis = 0;
 volatile bool activelyUsing = false;
 volatile bool pressAcknowledged = false;
+volatile bool ignoreIRQ = false;
 
 bool triggerTimeout = false;
 
@@ -108,14 +109,14 @@ void disableIRQs()
 {
     NVIC_ClearPendingIRQ(EIC_IRQn);
     NVIC_DisableIRQ(EIC_IRQn);
-    detachInterrupt(9);
+    ignoreIRQ = true;
 }
 
 void enableIRQs()
 {
     NVIC_ClearPendingIRQ(EIC_IRQn);
-    NVIC_EnableIRQ(EIC_IRQn);
-    attachInterrupt(9, buttonIrq, LOW);
+    NVIC_EnableIRQ(EIC_IRQn); // somehow the interrupt is acknowledged for a short while before going to sleep
+    ignoreIRQ = false;
 }
 
 void usleepz(uint32_t usecs)
@@ -187,6 +188,8 @@ void setup()
 // cannot use I2C stuff in IRQ's as it uses clock
 void buttonIrq()
 {
+    if (ignoreIRQ)
+        return;
     // needs debouncing in the button case
     if (millis() - debounceMillis > BUTTON_PRESS_DELAY)
     {
@@ -198,6 +201,21 @@ void buttonIrq()
 }
 
 // TODO: add sleep enable button
+void gotoSleep()
+{
+    // send data over wifi before sleeping
+    peripheralsOff();
+
+    wifiSendOnce();
+    digitalWrite(LED_BUILTIN, 0);
+    triggerTimeout = true;
+
+    // prepare other peripherals to sleep here
+    usleepz(SLEEP_TIME);
+    collector.collectorOn(); // turn on only the collector (no need to wake up the screen for just data collection)
+    // after wakeup wrong values are in the batch registers? // TODO: why
+    batch.reset();
+}
 
 void loop()
 {
@@ -213,18 +231,9 @@ void loop()
     // check the conditions for going back to sleep -> trigger sleeping
     if (millis() - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
     {
-        // send data over wifi before sleeping
-        peripheralsOff();
-
-        wifiSendOnce();
-        digitalWrite(LED_BUILTIN, 0);
-        triggerTimeout = true;
-
-        // prepare other peripherals to sleep here
-        usleepz(SLEEP_TIME);
-        collector.collectorOn(); // turn on only the collector (no need to wake up the screen for just data collection)
         print("ActivelyUsing: %d\n", activelyUsing);
         print("Time to sleep ZZZ - now for realz\n");
+        gotoSleep();
     }
     digitalWrite(LED_BUILTIN, 1);
 
@@ -242,19 +251,23 @@ void loop()
         // send data in a fixed interval, poll for new packets
         wifiActivelyUsingTask();
 
+        // refresh timeout timer
+        wakeUpMillis = millis();
+
         // check if time has passed since last button press and go to sleep
         if (millis() - debounceMillis > WAKEUP_INTERVAL)
         {
             print("Currentmilis %ld\n", millis());
             print("Buttonpress %ld\n", debounceMillis);
             print("Time to sleep ZZZ\n");
+            print("ActivelyUsing: %d\n", activelyUsing);
             activelyUsing = false;
             //display.displayOff();
-            print("ActivelyUsing: %d\n", activelyUsing);
+            gotoSleep();
+            // reset the wifi times
+            wifiPostMillis = millis();
+            wifiPollMillis = millis();
         }
-
-        // refresh timeout timer only after doing all menial tasks (prevents lockups)
-        wakeUpMillis = millis();
     }
     else
     {
@@ -279,6 +292,7 @@ void dataTask()
     }
 }
 
+// TODO: MQTT connection or data receival wrecks the Batch buffer data...????
 void wifiActivelyUsingTask()
 {
     // set up conditions for posting

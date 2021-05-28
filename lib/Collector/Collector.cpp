@@ -31,10 +31,10 @@ int Collector::getData() // it is synchroneously driven, could be via interrupts
 {
     uint32_t red = pulseoximiter.getRed();
     uint32_t ir = pulseoximiter.getIR();
-    //print("R: %ul IR: %ul", red, ir);
+    print("R: %lu IR: %lu", red, ir);
 
-    redBuffer[idx % BUFSIZE] = red;
-    irBuffer[idx % BUFSIZE] = ir;
+    redBuffer[idx % INFERENCE_BUFSIZE] = red;
+    irBuffer[idx % INFERENCE_BUFSIZE] = ir;
     ++idx;
 
     return 0;
@@ -44,6 +44,7 @@ int Collector::readData(Batch& batch)
 {
     // read either lower or upper half of the buffer IMPLEMENTATION EASE (or should I say lazyness?)
     // it does not make a big difference anyway
+    print("Reading time: idx: %d\n", idx);
 
     if (idx < INFERENCE_BUFSIZE)
     {
@@ -63,10 +64,10 @@ int Collector::readData(Batch& batch)
 int Collector::getLastData(Batch& batch)
 {
     // TODO: change to a circular buffer
-    auto i = (idx % BUFSIZE == 0) ? BUFSIZE - 1 : idx % BUFSIZE - 1;
+    auto i = (idx % INFERENCE_BUFSIZE == 0) ? INFERENCE_BUFSIZE - 1 : idx % INFERENCE_BUFSIZE - 1;
 
     batch.deviceOk = false;
-
+    print("Batch data: bpm %d, avg: %d, spo2: %d\n", batch.beatsPerMinute, batch.beatAverage, batch.spO2);
     // calculate the heart rate and spO2 (should be split to a new class??)
     if (irBuffer[i] > 25000)
     {

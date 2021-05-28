@@ -35,6 +35,16 @@ void print(const char* str, T... args)
 struct Batch
 {
     Batch() : ppg_red(0), ppg_ir(0), start_idx(0), beatAverage(0), beatsPerMinute(0), spO2(0), temperature(0), deviceOk(false) {}
+
+    void reset()
+    {
+        beatAverage = 0;
+        beatsPerMinute = 0;
+        spO2 = 0;
+        temperature = 0;
+        deviceOk = false;
+    }
+
     uint32_t* ppg_red; // pass only pointers to the array
     uint32_t* ppg_ir; // TODO: the buffer size is for now 125 samples, probably should be 10 times that for best inference
     uint8_t start_idx;
