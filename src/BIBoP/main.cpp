@@ -55,7 +55,7 @@ constexpr auto WIFI_PUBLISH_INTERVAL = 60000; // 60 seconds when using the devic
 constexpr auto WIFI_POLL_INTERVAL = 1000;
 constexpr auto BUTTON_PRESS_DELAY = 200;
 constexpr auto SECOND = 1000000;
-constexpr auto SLEEP_TIME = 10 * SECOND; // 90 seconds? TODO: 10 seconds for now
+constexpr auto SLEEP_TIME = 60 * SECOND; // 90 seconds? TODO: 10 seconds for now
 
 void buttonIrq();
 void dataTask();
@@ -63,6 +63,8 @@ void wifiActivelyUsingTask();
 void oledTask();
 void wifiSendOnce();
 void wifiPoll();
+void disableIRQs();
+void enableIRQs();
 
 // move to a class
 void usleep_init()
@@ -102,6 +104,20 @@ void peripheralsOn()
     //PM->APBCMASK.reg |= PM_APBCMASK_SERCOM0;
 }
 
+void disableIRQs()
+{
+    NVIC_ClearPendingIRQ(EIC_IRQn);
+    NVIC_DisableIRQ(EIC_IRQn);
+    detachInterrupt(9);
+}
+
+void enableIRQs()
+{
+    NVIC_ClearPendingIRQ(EIC_IRQn);
+    NVIC_EnableIRQ(EIC_IRQn);
+    attachInterrupt(9, buttonIrq, LOW);
+}
+
 void usleepz(uint32_t usecs)
 {
     // CARE FOR OVERFLOWS
@@ -126,12 +142,12 @@ void usleepz(uint32_t usecs)
     RTC->MODE0.CTRL.reg |= RTC_MODE0_CTRL_ENABLE;
     while (RTC->MODE0.STATUS.bit.SYNCBUSY);
 
-    peripheralsOff();
     SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;           // Disable SysTick interrupts
     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
     __DSB();
     __WFI();
     SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;           // Enable SysTick interrupts
+    NVIC_ClearPendingIRQ(EIC_IRQn); // clear any remaining IRQs
 }
 
 void setup()
@@ -198,19 +214,22 @@ void loop()
     if (millis() - wakeUpMillis > ACTIVITY_INTERVAL && !activelyUsing)
     {
         // send data over wifi before sleeping
-        //wifiSendOnce();
+        peripheralsOff();
+
+        wifiSendOnce();
         digitalWrite(LED_BUILTIN, 0);
         triggerTimeout = true;
 
         // prepare other peripherals to sleep here
         usleepz(SLEEP_TIME);
         collector.collectorOn(); // turn on only the collector (no need to wake up the screen for just data collection)
+        print("ActivelyUsing: %d\n", activelyUsing);
         print("Time to sleep ZZZ - now for realz\n");
     }
     digitalWrite(LED_BUILTIN, 1);
 
     // if user using the band: (read user input via the button)
-    if (activelyUsing)
+    if (activelyUsing) // TODO: why the hell this is true????
     {
         peripheralsOn();
         // different intervals for data and wifi?
@@ -221,7 +240,7 @@ void loop()
         oledTask();
 
         // send data in a fixed interval, poll for new packets
-        //wifiActivelyUsingTask();
+        wifiActivelyUsingTask();
 
         // check if time has passed since last button press and go to sleep
         if (millis() - debounceMillis > WAKEUP_INTERVAL)
@@ -230,7 +249,8 @@ void loop()
             print("Buttonpress %ld\n", debounceMillis);
             print("Time to sleep ZZZ\n");
             activelyUsing = false;
-            display.displayOff();
+            //display.displayOff();
+            print("ActivelyUsing: %d\n", activelyUsing);
         }
 
         // refresh timeout timer only after doing all menial tasks (prevents lockups)
@@ -240,11 +260,11 @@ void loop()
     {
         // in a fixed interval: 125 Hz
         // collect data
-        dataTask();
+        dataTask(); // todo: some thrash goes to the display when sleeping
 
         // in a fixed interval
         // poll for incoming packets
-        //wifiPoll();
+        wifiPoll();
     }
 }
 
@@ -259,17 +279,21 @@ void dataTask()
     }
 }
 
-void wifiActivelyUsingTask() // TODO: different frequency of updates when using the device
+void wifiActivelyUsingTask()
 {
     // set up conditions for posting
     // publish only after some time passed from last check when using actively OR just woke up to collect data (handled separately)
     if (millis() - wifiPostMillis > WIFI_PUBLISH_INTERVAL)
     {
         print("Actively using wifi push\n");
+        // disable interrupts
+        disableIRQs();
         networkManager.reconnectWiFi();
         collector.readData(batch);
         networkManager.postWiFi(batch);
         wifiPostMillis = millis();
+        //enable interrupts
+        enableIRQs();
     }
 
     if (millis() - wifiPollMillis > WIFI_POLL_INTERVAL)
@@ -284,9 +308,13 @@ void wifiActivelyUsingTask() // TODO: different frequency of updates when using 
 void wifiSendOnce()
 {
     print("Oneshot wifi posting because going to sleep\n");
+    // disable interrupts
+    disableIRQs();
     networkManager.reconnectWiFi();
     collector.readData(batch);
     networkManager.postWiFi(batch);
+    //enable interrupts
+    enableIRQs();
 }
 
 void wifiPoll()

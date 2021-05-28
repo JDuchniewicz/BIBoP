@@ -2,7 +2,7 @@
 #include "heartRate.h"
 #include "spo2_algorithm.h"
 
-Collector::Collector() : idx(0), m_hrIdx(0)
+Collector::Collector() : idx(0), m_lastBeat(0), m_heartRates({0, 0, 0, 0}), m_hrIdx(0)
 {
 
 }
