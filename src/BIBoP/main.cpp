@@ -37,7 +37,9 @@ TwoWire sensorI2c(&sercom0, 5, 6);
 
 volatile uint32_t wakeUpMillis = 0;
 volatile uint32_t debounceMillis = 0;
+volatile uint32_t sleepDebounceMillis = 0;
 volatile bool activelyUsing = false;
+volatile bool sleepButtonRequested = false;
 volatile bool pressAcknowledged = false;
 volatile bool ignoreIRQ = false;
 
@@ -59,6 +61,7 @@ constexpr auto SECOND = 1000000;
 constexpr auto SLEEP_TIME = 60 * SECOND; // 90 seconds? TODO: 10 seconds for now
 
 void buttonIrq();
+void sleepIrq();
 void dataTask();
 void wifiActivelyUsingTask();
 void oledTask();
@@ -177,12 +180,30 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(9, INPUT_PULLUP);
     attachInterrupt(9, buttonIrq, LOW);
+
+    // instant sleep button
+    pinMode(10, INPUT_PULLUP);
+    attachInterrupt(10, sleepIrq, LOW);
+
     // FAILSAFE wait 12 seconds before going to sleep
     delay(12000);
 
     usleep_init();
 
     triggerTimeout = true;
+}
+
+void sleepIrq()
+{
+    if (ignoreIRQ || !activelyUsing) // TODO: this will probably be fd up without debugging why activelyUsing randomly changes
+        return;
+
+    if (millis() - sleepDebounceMillis > 5 * BUTTON_PRESS_DELAY)
+    {
+        sleepDebounceMillis = millis();
+        sleepButtonRequested = true;
+        print("Sleep requested\n");
+    }
 }
 
 // cannot use I2C stuff in IRQ's as it uses clock
@@ -255,13 +276,14 @@ void loop()
         wakeUpMillis = millis();
 
         // check if time has passed since last button press and go to sleep
-        if (millis() - debounceMillis > WAKEUP_INTERVAL)
+        if (millis() - debounceMillis > WAKEUP_INTERVAL || sleepButtonRequested)
         {
             print("Currentmilis %ld\n", millis());
             print("Buttonpress %ld\n", debounceMillis);
             print("Time to sleep ZZZ\n");
             print("ActivelyUsing: %d\n", activelyUsing);
             activelyUsing = false;
+            sleepButtonRequested = false;
             //display.displayOff();
             gotoSleep();
             // reset the wifi times
