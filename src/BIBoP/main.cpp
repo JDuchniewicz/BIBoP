@@ -273,7 +273,7 @@ void loop()
     {
         // in a fixed interval: 125 Hz
         // collect data
-        dataTask(); // todo: some thrash goes to the display when sleeping
+        dataTask();
 
         // in a fixed interval
         // poll for incoming packets

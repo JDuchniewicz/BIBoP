@@ -31,7 +31,7 @@ int Collector::getData() // it is synchroneously driven, could be via interrupts
 {
     uint32_t red = pulseoximiter.getRed();
     uint32_t ir = pulseoximiter.getIR();
-    print("R: %lu IR: %lu", red, ir);
+    //print("R: %lu IR: %lu", red, ir);
 
     redBuffer[idx % INFERENCE_BUFSIZE] = red;
     irBuffer[idx % INFERENCE_BUFSIZE] = ir;
@@ -44,7 +44,7 @@ int Collector::readData(Batch& batch)
 {
     // read either lower or upper half of the buffer IMPLEMENTATION EASE (or should I say lazyness?)
     // it does not make a big difference anyway
-    print("Reading time: idx: %d\n", idx);
+    //print("Reading time: idx: %d\n", idx);
 
     if (idx < INFERENCE_BUFSIZE)
     {

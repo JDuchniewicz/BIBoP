@@ -34,9 +34,7 @@ private:
 
     BearSSLClient& sslLambda;
     MqttClient& mqttClient;
-    Config m_config;
-    unsigned long m_lastMillis; //should be long?
-    unsigned long m_pollMillis;
+    Config& m_config;
 
     char MESSAGE_BUFFER[MESSAGE_BUF_SIZE];
 };
