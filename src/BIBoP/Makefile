@@ -11,7 +11,7 @@ MONITOR_BAUDRATE  = 115200
 AVR_TOOLS_DIR     = /usr
 AVRDUDE           = /usr/bin/avrdude
 CFLAGS_STD        = -std=gnu11
-CXXFLAGS_STD      = -std=gnu++17
+CXXFLAGS_STD      = -std=gnu++17 -g
 CXXFLAGS         += -pedantic -Wall -Wextra
 LDFLAGS          += -fdiagnostics-color
 

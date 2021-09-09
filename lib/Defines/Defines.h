@@ -3,9 +3,10 @@
 #include <stdint.h>
 #include <Arduino.h>
 #include <Wire.h>
+#include <SEGGER_RTT.h>
 
 // controls if it should do logging
-constexpr auto DEBUG = true;
+constexpr auto DEBUG = false;
 
 // all the defines will be stored here
 constexpr auto SAMPLING_HZ = 125;
@@ -29,6 +30,10 @@ void print(const char* str, T... args)
     {
         sprintf(PRINT_BUFFER, str, args...);
         Serial.print(PRINT_BUFFER);
+    } else
+    {
+        sprintf(PRINT_BUFFER, str, args...);
+        SEGGER_RTT_Write(0, PRINT_BUFFER, PRINTBUF_SIZE);
     }
 }
 

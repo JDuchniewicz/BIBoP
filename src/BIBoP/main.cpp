@@ -10,6 +10,7 @@
 #include "Secrets.h"
 #include <MAX30105.h>
 #include <WiFiNINA.h>
+#include <SEGGER_RTT.h>
 // in order to make WiFiNINA build, I had to remove one UDP.h in cores/arduino and move the IPAdress raw_addr to public
 #include <SPI.h> // required to build wifinina
 #include <ArduinoECCX08.h>
@@ -357,7 +358,7 @@ void wifiPoll()
 {
     if (millis() - wifiPollMillis > WIFI_POLL_INTERVAL)
     {
-        print("Actively using wifi poll\n");
+        print("Regular wifi poll\n");
         networkManager.reconnectWiFi();
         networkManager.readWiFi();
         wifiPollMillis = millis();

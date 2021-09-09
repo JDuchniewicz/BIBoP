@@ -35,6 +35,7 @@
 -I/mnt/games/Projects/Personal/BIBoP/lib/Collector
 -I/mnt/games/Projects/Personal/BIBoP/lib/Defines
 -I/mnt/games/Projects/Personal/BIBoP/lib/Display
+-I/mnt/games/Projects/Personal/BIBoP/lib/SEGGER_RTT
 -Wall
 -ffunction-sections
 -fdata-sections
